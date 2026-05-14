@@ -1,0 +1,17 @@
+{
+  "mode": "full_auto",
+  "image_mode": "aggressive",
+  "publish_mode": "auto_publish",
+  "posts_per_run": 5,
+  "images_per_post": 3,
+  "fallback_generated_images": true,
+  "dedupe_images": true,
+  "block_blog_images": true,
+  "block_watermarked_images": true,
+  "log_sources": true,
+  "retry_count": 2,
+  "min_body_chars": 1200,
+  "max_body_chars": 2200,
+  "min_tags": 12,
+  "max_tags": 20
+}
