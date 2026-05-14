@@ -1,0 +1,273 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<skin>
+  <information>
+    <name>Issue Journalist Newsroom</name>
+    <version>1</version>
+    <description>
+      <![CDATA[연예 기사 정리 블로그용 뉴스룸 스킨]]>
+    </description>
+    <license>
+      <![CDATA[Customized for IssueJournalist]]>
+    </license>
+  </information>
+
+  <author>
+    <name>헤이데이</name>
+    <homepage>http://12x27gif.tistory.com</homepage>
+    <email>heydaybp@gmail.com</email>
+  </author>
+
+  <default>
+    <recentEntries>0</recentEntries>
+    <recentComments>0</recentComments>
+    <recentTrackbacks>0</recentTrackbacks>
+    <itemsOnGuestbook>3</itemsOnGuestbook>
+    <tagsInCloud>0</tagsInCloud>
+    <sortInCloud>3</sortInCloud>
+    <expandComment>0</expandComment>
+    <expandTrackback>0</expandTrackback>
+    <lengthOfRecentNotice>0</lengthOfRecentNotice>
+    <lengthOfRecentEntry>0</lengthOfRecentEntry>
+    <lengthOfRecentComment>0</lengthOfRecentComment>
+    <lengthOfRecentTrackback>0</lengthOfRecentTrackback>
+    <lengthOfLink>30</lengthOfLink>
+    <showListOnCategory>2</showListOnCategory>
+    <showListOnArchive>1</showListOnArchive>
+    <entriesOnPage>1</entriesOnPage>
+    <entriesOnList>12</entriesOnList>
+    <commentMessage>
+      <none>0</none>
+      <single>1</single>
+    </commentMessage>
+    <tree>
+      <labelLength>40</labelLength>
+      <showValue>0</showValue>
+    </tree>
+    <contentWidth>1080</contentWidth>
+    <liststyle>card</liststyle>
+    <cover>
+      [
+        {
+          "name": "notice",
+          "title": "notice",
+          "dataType": "CUSTOM",
+          "data":[
+              {
+                  "title": "notice",
+                  "summary": "공지사항을 작성하세요.",
+                  "url": "",
+                  "thumbnail": ""
+              }
+          ]
+        }
+      ]
+    </cover>
+  </default>
+
+  <liststyle>
+    <item>
+      <value>list</value>
+      <label>
+        <![CDATA[ 리스트형 ]]>
+      </label>
+    </item>
+    <item>
+      <value>bigthumb</value>
+      <label>
+        <![CDATA[ 썸네일형 ]]>
+      </label>
+    </item>
+    <item>
+      <value>gallery</value>
+      <label>
+        <![CDATA[ 갤러리형 ]]>
+      </label>
+    </item>
+    <item>
+      <value>card</value>
+      <label>
+        <![CDATA[ 카드형 ]]>
+      </label>
+    </item>
+  </liststyle>
+
+  <variables>
+    <variablegroup name="배경 설정">
+      <variable>
+        <name>body-img</name>
+        <label>배경 이미지</label>
+        <type>IMAGE</type>
+        <default></default>
+      </variable>
+      <variable>
+        <name>body-bg</name>
+        <label>배경색</label>
+        <type>COLOR</type>
+        <default>#f4f6fb</default>
+      </variable>
+    </variablegroup>
+
+    <variablegroup name="테마 설정">
+      <variable>
+        <name>dark-theme</name>
+        <label>다크모드 적용</label>
+        <type>BOOL</type>
+        <default>false</default>
+      </variable>
+      <variable>
+        <name>point-color</name>
+        <label>포인트 색상</label>
+        <type>COLOR</type>
+        <default>#e0002a</default>
+      </variable>
+    </variablegroup>
+
+    <variablegroup name="마우스 드래그">
+      <variable>
+        <name>selection-bg</name>
+        <label>드래그 배경 색상</label>
+        <type>COLOR</type>
+        <default>#11131a</default>
+      </variable>
+      <variable>
+        <name>selection-color</name>
+        <label>드래그 폰트 색상</label>
+        <type>COLOR</type>
+        <default>#ffffff</default>
+      </variable>
+    </variablegroup>
+
+    <variablegroup name="외부링크 연결 1">
+      <variable>
+        <name>a_link</name>
+        <label>링크1</label>
+        <type>STRING</type>
+        <default></default>
+      </variable>
+      <variable>
+        <name>a_icon</name>
+        <label>아이콘</label>
+        <type>STRING</type>
+        <default>
+          <![CDATA[ fa-solid fa-link ]]>
+        </default>
+      </variable>
+      <variable>
+        <name>a_text</name>
+        <label>링크 이름</label>
+        <type>STRING</type>
+        <default>
+          <![CDATA[ 링크 ]]>
+        </default>
+      </variable>
+    </variablegroup>
+
+    <variablegroup name="외부링크 연결 2">
+      <variable>
+        <name>b_link</name>
+        <label>링크1</label>
+        <type>STRING</type>
+        <default></default>
+      </variable>
+      <variable>
+        <name>b_icon</name>
+        <label>아이콘</label>
+        <type>STRING</type>
+        <default>
+          <![CDATA[ fa-solid fa-link ]]>
+        </default>
+      </variable>
+      <variable>
+        <name>b_text</name>
+        <label>링크 이름</label>
+        <type>STRING</type>
+        <default>
+          <![CDATA[ 링크 ]]>
+        </default>
+      </variable>
+    </variablegroup>
+
+    <variablegroup name="외부링크 연결 2">
+      <variable>
+        <name>c_link</name>
+        <label>링크1</label>
+        <type>STRING</type>
+        <default></default>
+      </variable>
+      <variable>
+        <name>c_icon</name>
+        <label>아이콘</label>
+        <type>STRING</type>
+        <default>
+          <![CDATA[ fa-solid fa-link ]]>
+        </default>
+      </variable>
+      <variable>
+        <name>c_text</name>
+        <label>링크 이름</label>
+        <type>STRING</type>
+        <default>
+          <![CDATA[ 링크 ]]>
+        </default>
+      </variable>
+    </variablegroup>
+
+    <variablegroup name="외부링크 연결 2">
+      <variable>
+        <name>d_link</name>
+        <label>링크1</label>
+        <type>STRING</type>
+        <default></default>
+      </variable>
+      <variable>
+        <name>d_icon</name>
+        <label>아이콘</label>
+        <type>STRING</type>
+        <default>
+          <![CDATA[ fa-solid fa-link ]]>
+        </default>
+      </variable>
+      <variable>
+        <name>d_text</name>
+        <label>링크 이름</label>
+        <type>STRING</type>
+        <default>
+          <![CDATA[ 링크 ]]>
+        </default>
+      </variable>
+    </variablegroup>
+  </variables>
+
+  <cover>
+    <item>
+      <name>notice</name>
+      <label>
+        <![CDATA[ 공지사항 ]]>
+      </label>
+    </item>
+    <item>
+      <name>list</name>
+      <label>
+        <![CDATA[ 리스트형 ]]>
+      </label>
+    </item>
+    <item>
+      <name>bigthumb</name>
+      <label>
+        <![CDATA[ 썸네일형 ]]>
+      </label>
+    </item>
+    <item>
+      <name>gallery</name>
+      <label>
+        <![CDATA[ 갤러리형 ]]>
+      </label>
+    </item>
+    <item>
+      <name>card</name>
+      <label>
+        <![CDATA[ 카드형 ]]>
+      </label>
+    </item>
+  </cover>
+</skin>

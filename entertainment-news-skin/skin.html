@@ -1,0 +1,537 @@
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, width=device-width" />
+    <title>[##_title_##]</title>
+    <link rel="alternate" type="application/rss+xml" title="[##_title_##]" href="[##_rss_url_##]" />
+    <link rel="stylesheet" href="./style.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v6.2.0/css/all.css" />
+    <script src="https://unpkg.com/phosphor-icons"></script>
+    <script src="//pull.cappuccicons.com/cpf.js"></script>
+    <script defer src="https://blog.kakaocdn.net/dn/nsPrU/btrQihcs9TA/w0HfEpioh5v15yhzpE0Vzk/tfile.js"></script>
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard-dynamic-subset.css" />
+    <style>
+      :root {
+        --body-img: url([##_var_body-img_##]);
+        --body-bg: [##_var_body-bg_##];
+        --point-color: [##_var_point-color_##];
+        --selection-bg: [##_var_selection-bg_##];
+        --selection-color: [##_var_selection-color_##];
+        --albumW: 4;
+        --cardW: 3;
+        --thumbW: 4;
+        --channel-red: var(--point-color);
+        --channel-blue: #165dff;
+        --channel-yellow: #ffcc33;
+        --transition: 0.3s;
+      }
+    </style>
+    <s_if_var_dark-theme>
+      <style>
+        :root {
+          --color: #d9d9d9;
+          --dark-color: #9b9b9b;
+          --containerBG: #11131a;
+          --hover-bg: rgba(255, 255, 255, 0.08);
+          --thumb-bg: #2a2d36;
+          --dark-a: rgba(255, 255, 255, 0.06);
+          --dark-b: rgba(0, 0, 0, 0.48);
+          --border: rgba(255, 255, 255, 0.12);
+        }
+      </style>
+    </s_if_var_dark-theme>
+    <s_not_var_dark-theme>
+      <style>
+        :root {
+          --color: #15171c;
+          --dark-color: #747986;
+          --containerBG: #ffffff;
+          --thumb-bg: #e9edf5;
+          --hover-bg: rgba(224, 0, 42, 0.08);
+          --dark-a: rgba(14, 20, 32, 0.055);
+          --dark-b: rgba(14, 20, 32, 0.5);
+          --border: #e1e5ee;
+        }
+      </style>
+    </s_not_var_dark-theme>
+    <script defer>
+      window.addEventListener("load", () => {
+        document.body.classList.remove("spinner");
+        document.body.classList.add("show");
+      });
+    </script>
+  </head>
+  <body id="[##_body_id_##]" class="spinner">
+    <s_t3>
+      <div id="skin">
+        <div class="sidebar-bg"></div>
+        <div id="sidebar">
+          <div class="copyright">
+            <a href="/" target="_self"><i class="ph-circle-fill" style="color: #e0002a"></i></a>
+            <a href="/manage/newpost" target="_blank"><i class="ph-circle-fill" style="color: #febc2e"></i></a>
+            <a href="/manage/" target="_blank"><i class="ph-circle-fill" style="color: #165dff"></i></a>
+          </div>
+          <div class="inner">
+            <div class="channel-brand">
+              <a href="/" class="brand-title">[##_title_##]</a>
+              <div class="brand-kicker">ENTERTAINMENT NEWSROOM</div>
+              <p>연예 이슈를 빠르게 읽고 정리하는 데스크</p>
+            </div>
+            <s_search>
+              <div class="search">
+                <i class="ph-magnifying-glass-bold"></i>
+                <input type="text" placeholder="검색" onfocus="this.placeholder=''" onblur="this.placeholder='검색'" name="[##_search_name_##]" onkeypress="if (event.keyCode == 13) { [##_search_onclick_submit_##] }" />
+              </div>
+            </s_search>
+            <div class="menu">
+              <h1>ON AIR</h1>
+              <a href="/"><i class="ph-house-bold"></i>홈</a>
+              <a href="/guestbook"><i class="ph-chat-teardrop-dots-bold"></i>제보/메시지</a>
+            </div>
+            <div class="bookmark">
+              <s_if_var_a_link>
+                <h1>바로가기</h1>
+                <a href="[##_var_a_link_##]" target="_blank"><i class="[##_var_a_icon_##]"></i>[##_var_a_text_##]</a>
+              </s_if_var_a_link>
+              <s_if_var_b_link>
+                <a href="[##_var_b_link_##]" target="_blank"><i class="[##_var_b_icon_##]"></i>[##_var_b_text_##]</a>
+              </s_if_var_b_link>
+              <s_if_var_c_link>
+                <a href="[##_var_c_link_##]" target="_blank"><i class="[##_var_c_icon_##]"></i>[##_var_c_text_##]</a>
+              </s_if_var_c_link>
+              <s_if_var_d_link>
+                <a href="[##_var_d_link_##]" target="_blank"><i class="[##_var_d_icon_##]"></i>[##_var_d_text_##]</a>
+              </s_if_var_d_link>
+            </div>
+            <div class="category">
+              <h1>섹션</h1>
+              [##_category_list_##]
+            </div>
+          </div>
+        </div>
+
+        <div id="container">
+          <div class="loading">
+            <div class="text">불러오는 중<i class="fas fa-spinner fa-spin"></i></div>
+          </div>
+          <div class="inner">
+            <header class="channel-header">
+              <div class="masthead">
+                <a href="/" class="site-title">[##_title_##]</a>
+                <span class="live-pill"><i class="ph-dot-outline-fill"></i> LIVE DESK</span>
+              </div>
+              <div class="breaking-line">
+                <span>BREAKING</span>
+                <strong>컴백, 드라마, 예능, 화제성 흐름을 한눈에 정리합니다.</strong>
+              </div>
+            </header>
+            <div id="cover">
+              <s_cover_group>
+                <s_cover_rep>
+                  <s_cover name="notice">
+                    <div class="cover notice">
+                      <s_cover_item>
+                        <div class="notice_label">[##_cover_item_title_##]</div>
+                        <div class="notice_inner">[##_cover_item_summary_##]<span class="close">닫기</span></div>
+                      </s_cover_item>
+                    </div>
+                    <div class="notice_bg"></div>
+                  </s_cover>
+
+                  <s_cover name="gallery">
+                    <div class="cover list_rep">
+                      <h2 class="list_conform">[##_cover_title_##]</h2>
+                      <s_cover_item>
+                        <div class="gallery">
+                          <div class="thumb">
+                            <s_cover_item_thumbnail>
+                              <img src="[##_cover_item_thumbnail_##]" />
+                            </s_cover_item_thumbnail>
+                            <div class="noimg">
+                              <i class="ph-newspaper-bold"></i>
+                            </div>
+                            <div class="playbt">
+                              <a href="[##_cover_item_url_##]">
+                                <i class="ph-play-fill"></i>
+                              </a>
+                            </div>
+                          </div>
+                          <a href="[##_cover_item_url_##]" class="item_info">
+                            <div class="item_title">
+                              <span>[##_cover_item_title_##]</span>
+                            </div>
+                            <div class="item_date"></div>
+                          </a>
+                        </div>
+                      </s_cover_item>
+                    </div>
+                  </s_cover>
+
+                  <s_cover name="list">
+                    <div class="cover list_rep">
+                      <h2 class="list_conform">[##_cover_title_##]</h2>
+                      <s_cover_item>
+                        <div class="list">
+                          <div class="thumb">
+                            <s_cover_item_thumbnail>
+                              <img src="[##_cover_item_thumbnail_##]" />
+                            </s_cover_item_thumbnail>
+                            <div class="noimg">
+                              <i class="ph-newspaper-bold"></i>
+                            </div>
+                            <div class="playbt">
+                              <a href="[##_cover_item_url_##]">
+                                <i class="ph-play-fill"></i>
+                              </a>
+                            </div>
+                          </div>
+                          <a href="[##_cover_item_url_##]" class="item_info">
+                            <div class="item_title">
+                              <span>[##_cover_item_title_##]</span>
+                            </div>
+                            <div class="item_date"></div>
+                          </a>
+                        </div>
+                      </s_cover_item>
+                    </div>
+                  </s_cover>
+
+                  <s_cover name="card">
+                    <div class="cover list_rep">
+                      <h2 class="list_conform">[##_cover_title_##]</h2>
+                      <s_cover_item>
+                        <div class="card">
+                          <div class="thumb">
+                            <s_cover_item_thumbnail>
+                              <img src="[##_cover_item_thumbnail_##]" />
+                            </s_cover_item_thumbnail>
+                            <div class="noimg">
+                              <i class="ph-newspaper-bold"></i>
+                            </div>
+                            <div class="playbt">
+                              <a href="[##_cover_item_url_##]">
+                                <i class="ph-play-fill"></i>
+                              </a>
+                            </div>
+                          </div>
+                          <a href="[##_cover_item_url_##]" class="item_info">
+                            <div class="item_title">
+                              <span>[##_cover_item_title_##]</span>
+                            </div>
+                            <div class="item_date"></div>
+                          </a>
+                        </div>
+                      </s_cover_item>
+                    </div>
+                  </s_cover>
+
+                  <s_cover name="bigthumb">
+                    <div class="cover list_rep">
+                      <h2 class="list_conform">[##_cover_title_##]</h2>
+                      <s_cover_item>
+                        <div class="bigthumb">
+                          <div class="thumb">
+                            <s_cover_item_thumbnail>
+                              <img src="[##_cover_item_thumbnail_##]" />
+                            </s_cover_item_thumbnail>
+                            <div class="noimg">
+                              <i class="ph-newspaper-bold"></i>
+                            </div>
+                            <div class="playbt">
+                              <a href="[##_cover_item_url_##]">
+                                <i class="ph-play-fill"></i>
+                              </a>
+                            </div>
+                          </div>
+                          <a href="[##_cover_item_url_##]" class="item_info">
+                            <div class="item_title">
+                              <span>[##_cover_item_title_##]</span>
+                            </div>
+                            <div class="item_date"></div>
+                          </a>
+                        </div>
+                      </s_cover_item>
+                    </div>
+                  </s_cover>
+                </s_cover_rep>
+              </s_cover_group>
+            </div>
+
+            <div id="guestbook">
+              <s_guest>
+                <div class="writeBox">
+                  <s_guest_input_form>
+                    <div class="check-bt">
+                      <input type="checkbox" id="secret" name="[##_guest_input_is_secret_##]" />
+                      <label for="secret" class="secret"></label>
+                    </div>
+                    <textarea placeholder="내용을 입력하세요" onfocus="this.placeholder=''" onblur="this.placeholder='내용을 입력하세요'" name="[##_guest_textarea_body_##]" cols="50" rows="6"></textarea>
+                    <div class="member">
+                      <s_guest_member>
+                        <s_guest_form>
+                          <div class="nameInput">
+                            <input placeholder="이름" onfocus="this.placeholder=''" onblur="this.placeholder='이름'" type="text" name="[##_guest_input_name_##]" value="[##_guest_name_##]" />
+                          </div>
+                          <div class="pwInput">
+                            <input placeholder="암호" onfocus="this.placeholder=''" onblur="this.placeholder='암호'" type="password" maxlength="30" name="[##_guest_input_password_##]" value="[##_guest_password_##]" />
+                          </div>
+                        </s_guest_form>
+                      </s_guest_member>
+                      <div class="submit" onclick="[##_guest_onclick_submit_##]"><i class="ph-paper-plane-right-bold"></i>등록</div>
+                    </div>
+                  </s_guest_input_form>
+                </div>
+                <s_guest_container>
+                  <div class="cmtList">
+                    <s_guest_rep>
+                      <li id="[##_guest_rep_id_##]">
+                        <div class="[##_guest_rep_class_##]">
+                          <img src="[##_guest_rep_logo_##]" />
+                          <div class="cmtWrap">
+                            <div class="cmtName">[##_guest_rep_name_##]</div>
+                            <div class="cmtdesc">[##_guest_rep_desc_##]</div>
+                            <div class="control">
+                              <a href="#" onclick="[##_guest_rep_onclick_delete_##]">수정</a>
+                              <a ref="#" onclick="[##_guest_rep_onclick_reply_##]">답글</a>
+                            </div>
+                          </div>
+                        </div>
+                        <s_guest_reply_container>
+                          <ul>
+                            <s_guest_reply_rep>
+                              <li id="[##_guest_rep_id_##]">
+                                <div class="[##_guest_rep_class_##]">
+                                  <img src="[##_guest_rep_logo_##]" />
+                                  <div class="cmtWrap">
+                                    <div class="cmtName">[##_guest_rep_name_##]</div>
+                                    <div class="cmtdesc">[##_guest_rep_desc_##]</div>
+                                    <div class="control">
+                                      <a href="#" onclick="[##_guest_rep_onclick_delete_##]">수정</a>
+                                    </div>
+                                  </div>
+                                </div>
+                              </li>
+                            </s_guest_reply_rep>
+                          </ul>
+                        </s_guest_reply_container>
+                      </li>
+                    </s_guest_rep>
+                  </div>
+                </s_guest_container>
+              </s_guest>
+            </div>
+
+            <s_list>
+              <h2 class="list_conform">[##_list_conform_##]</h2>
+              <div id="listStyle" class="[##_list_style_##]"></div>
+              <div class="listDesc">[##_list_description_##]</div>
+              <s_list_empty>
+                <div class="empty">등록된 글이 없습니다</div>
+              </s_list_empty>
+
+              <div class="list_rep">
+                <s_list_rep>
+                  <div class="index">
+                    <div class="thumb">
+                      <s_list_rep_thumbnail>
+                        <img src="[##_list_rep_thumbnail_##]" />
+                      </s_list_rep_thumbnail>
+                      <div class="noimg">
+                        <i class="ph-newspaper-bold"></i>
+                      </div>
+                      <div class="playbt">
+                        <a href="[##_list_rep_link_##]">
+                          <i class="ph-play-fill"></i>
+                        </a>
+                      </div>
+                    </div>
+                    <a class="item_info" href="[##_list_rep_link_##]">
+                      <div class="item_title">
+                        <span>[##_list_rep_title_##]</span>
+                      </div>
+                      <div class="item_date">[##_list_rep_date_month_##]:[##_list_rep_date_day_##]</div>
+                    </a>
+                  </div>
+                </s_list_rep>
+              </div>
+            </s_list>
+
+            <s_article_rep>
+              <div class="article_info">
+                <div class="thumb">
+                  <s_article_rep_thumbnail>
+                    <img src="[##_article_rep_thumbnail_raw_url_##]" />
+                  </s_article_rep_thumbnail>
+                  <div class="noimg">
+                    <i class="ph-newspaper-bold"></i>
+                  </div>
+                </div>
+                <div class="info_text">
+                  <div class="article_cate">[##_article_rep_category_##]</div>
+                  <div class="article_title">[##_article_rep_title_##]</div>
+                  <div class="article_date">[##_article_rep_date_month_##]월 [##_article_rep_date_day_##]일 업데이트</div>
+                  <div class="article_bottom">
+                    <a class="subscribe-button" href="[##_rss_url_##]" target="_blank" rel="noopener"><i class="ph-bell-ringing-bold"></i>구독하기</a>
+                    <s_ad_div>
+                      <div class="admin">
+                        <a href="[##_s_ad_m_link_##]"><i class="ph-pencil-bold"></i>수정</a>
+                        <a href="#" onclick="[##_s_ad_d_onclick_##]"><i class="ph-trash-bold"></i>삭제</a>
+                      </div>
+                    </s_ad_div>
+                  </div>
+                </div>
+              </div>
+              <div class="article">[##_article_rep_desc_##]</div>
+              <s_tag_label>
+                <div class="tagTrail">[##_tag_label_rep_##]</div>
+              </s_tag_label>
+              <div class="cmt_toggle"><i class="ph-chat-centered-text-bold"></i>댓글</div>
+
+              <div id="comment">
+                <s_rp>
+                  <div class="writeBox">
+                    <s_rp_input_form>
+                      <div class="check-bt">
+                        <input type="checkbox" id="secret" name="[##_rp_input_is_secret_##]" />
+                        <label for="secret" class="secret"></label>
+                      </div>
+                      <textarea placeholder="내용을 입력하세요" onfocus="this.placeholder=''" onblur="this.placeholder='내용을 입력하세요'" name="[##_rp_input_comment_##]" cols="50" rows="6"></textarea>
+                      <div class="member">
+                        <s_rp_member>
+                          <s_rp_guest>
+                            <div class="nameInput">
+                              <input placeholder="이름" onfocus="this.placeholder=''" onblur="this.placeholder='이름'" type="text" name="[##_rp_input_name_##]" value="[##_rp_name_##]" />
+                            </div>
+                            <div class="pwInput">
+                              <input placeholder="암호" onfocus="this.placeholder=''" onblur="this.placeholder='암호'" type="password" maxlength="30" name="[##_rp_input_password_##]" value="[##_rp_password_##]" />
+                            </div>
+                          </s_rp_guest>
+                        </s_rp_member>
+                        <div class="submit" onclick="[##_rp_onclick_submit_##]"><i class="ph-paper-plane-right-bold"></i>등록</div>
+                      </div>
+                    </s_rp_input_form>
+                  </div>
+                  <s_rp_container>
+                    <div class="cmtList">
+                      <s_rp_rep>
+                        <li id="[##_rp_rep_id_##]">
+                          <div class="[##_rp_rep_class_##]">
+                            <img src="[##_rp_rep_logo_##]" />
+                            <div class="cmtWrap">
+                              <div class="cmtName">[##_rp_rep_name_##]</div>
+                              <div class="cmtdesc">[##_rp_rep_desc_##]</div>
+                              <div class="control">
+                                <a href="#" onclick="[##_rp_rep_onclick_delete_##]">수정</a>
+                                <a ref="#" onclick="[##_rp_rep_onclick_reply_##]">답글</a>
+                              </div>
+                            </div>
+                          </div>
+                          <s_rp2_container>
+                            <ul>
+                              <s_rp2_rep>
+                                <li id="[##_rp_rep_id_##]">
+                                  <div class="[##_rp_rep_class_##]">
+                                    <img src="[##_rp_rep_logo_##]" />
+                                    <div class="cmtWrap">
+                                      <div class="cmtName">[##_rp_rep_name_##]</div>
+                                      <div class="cmtdesc">[##_rp_rep_desc_##]</div>
+                                      <div class="control">
+                                        <a href="#" onclick="[##_rp_rep_onclick_delete_##]">수정</a>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </li>
+                              </s_rp2_rep>
+                            </ul>
+                          </s_rp2_container>
+                        </li>
+                      </s_rp_rep>
+                    </div>
+                  </s_rp_container>
+                </s_rp>
+              </div>
+            </s_article_rep>
+
+            <s_page_rep>
+              <div class="article_info">
+                <div class="thumb">
+                  <s_article_rep_thumbnail>
+                    <img src="[##_article_rep_thumbnail_raw_url_##]" />
+                  </s_article_rep_thumbnail>
+                  <div class="noimg">
+                    <i class="ph-newspaper-bold"></i>
+                  </div>
+                </div>
+                <div class="info_text">
+                  <div class="article_cate">페이지</div>
+                  <div class="article_title">[##_article_rep_title_##]</div>
+                  <div class="article_date">[##_article_rep_date_month_##]월 [##_article_rep_date_day_##]일 업데이트</div>
+                </div>
+              </div>
+              <div class="article pages">[##_article_rep_desc_##]</div>
+            </s_page_rep>
+
+            <s_notice_rep>
+              <div class="article_info">
+                <div class="thumb">
+                  <s_notice_rep_thumbnail>
+                    <img src="[##_notice_rep_thumbnail_raw_url_##]" />
+                  </s_notice_rep_thumbnail>
+                  <div class="noimg">
+                    <i class="ph-newspaper-bold"></i>
+                  </div>
+                </div>
+                <div class="info_text">
+                  <div class="article_cate">공지</div>
+                  <div class="article_title">[##_notice_rep_title_##]</div>
+                  <div class="article_date">[##_notice_rep_date_month_##]월 [##_notice_rep_date_day_##]일 업데이트</div>
+                </div>
+              </div>
+              <div class="article noti">[##_notice_rep_desc_##]</div>
+            </s_notice_rep>
+
+            <s_article_protected>
+              <div class="article_info">
+                <div class="thumb">
+                  <div class="noimg">
+                    <i class="ph-newspaper-bold"></i>
+                  </div>
+                </div>
+                <div class="info_text">
+                  <div class="article_cate">[##_article_rep_category_##]</div>
+                  <div class="article_title">[##_article_rep_title_##]</div>
+                  <div class="article_date">[##_article_rep_date_month_##]월 [##_article_rep_date_day_##]일 업데이트</div>
+                  <div class="article_bottom lock">보호글</div>
+                </div>
+              </div>
+              <div class="article">
+                <div class="password">
+                  <input type="password" placeholder="비밀번호" onfocus="this.placeholder=''" onblur="this.placeholder='비밀번호'" maxlength="30" id="[##_article_password_##]" name="[##_article_password_##]" value="" onkeydown="if (event.keyCode == 13)[##_article_dissolve_##]" />
+                </div>
+              </div>
+            </s_article_protected>
+
+            <s_paging>
+              <div class="paging">
+                <a [##_prev_page_##]="[##_prev_page_##]" class="[##_no_more_prev_##]"><i class="ph-caret-circle-left-fill"></i>이전</a>
+                <a [##_next_page_##]="[##_next_page_##]" class="[##_no_more_next_##]">다음<i class="ph-caret-circle-right-fill"></i></a>
+              </div>
+            </s_paging>
+
+            <div class="footer">
+              <a href="/"><i class="ph-house-bold"></i><span>홈</span></a>
+              <a class="toggle"><i class="ph-cube-bold"></i><span>메뉴</span></a>
+              <a href="/guestbook"><i class="ph-chat-teardrop-dots-bold"></i><span>메시지</span></a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </s_t3>
+    <script src="./images/scrall.js"></script>
+    <script>
+      $(".guest_admin .cmtName, .rp_admin .cmtName").html('<a href="/">[##_blogger_##]</a>');
+      $(".guest_admin > img, .rp_admin > img").attr("src", "[##_image_##]");
+    </script>
+  </body>
+</html>

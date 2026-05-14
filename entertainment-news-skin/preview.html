@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Issue Journalist Preview</title>
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v6.2.0/css/all.css" />
+    <script src="https://unpkg.com/phosphor-icons"></script>
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard-dynamic-subset.css" />
+    <link rel="stylesheet" href="./style.css" />
+    <style>
+      :root {
+        --body-img: none;
+        --body-bg: #f4f6fb;
+        --point-color: #e0002a;
+        --selection-bg: #11131a;
+        --selection-color: #ffffff;
+        --color: #15171c;
+        --dark-color: #747986;
+        --containerBG: #ffffff;
+        --thumb-bg: #e9edf5;
+        --hover-bg: rgba(224, 0, 42, 0.08);
+        --dark-a: rgba(14, 20, 32, 0.055);
+        --dark-b: rgba(14, 20, 32, 0.5);
+        --border: #e1e5ee;
+        --channel-red: #e0002a;
+        --channel-blue: #165dff;
+        --channel-yellow: #ffcc33;
+        --transition: 0.3s;
+      }
+    </style>
+  </head>
+  <body class="show">
+    <div id="skin">
+      <div class="sidebar-bg"></div>
+      <aside id="sidebar">
+        <div class="copyright">
+          <a href="#"><i class="ph-circle-fill" style="color: #e0002a"></i></a>
+          <a href="#"><i class="ph-circle-fill" style="color: #febc2e"></i></a>
+          <a href="#"><i class="ph-circle-fill" style="color: #165dff"></i></a>
+        </div>
+        <div class="inner">
+          <div class="channel-brand">
+            <a href="#" class="brand-title">ISSUE JOURNALIST</a>
+            <div class="brand-kicker">ENTERTAINMENT NEWSROOM</div>
+            <p>연예 이슈를 빠르게 읽고 정리하는 데스크</p>
+          </div>
+          <div class="search">
+            <i class="ph-magnifying-glass-bold"></i>
+            <input type="text" placeholder="검색" />
+          </div>
+          <div class="menu">
+            <h1>ON AIR</h1>
+            <a href="#"><i class="ph-house-bold"></i>홈</a>
+            <a href="#"><i class="ph-chat-teardrop-dots-bold"></i>제보/메시지</a>
+          </div>
+          <div class="category">
+            <h1>섹션</h1>
+            <ul class="category_list">
+              <li><a href="#"><i class="ph-list-bold"></i>컴백 브리핑</a></li>
+              <li><a href="#"><i class="ph-list-bold"></i>드라마/OTT</a></li>
+              <li><a href="#"><i class="ph-list-bold"></i>예능 화제성</a></li>
+              <li><a href="#"><i class="ph-list-bold"></i>스타 인터뷰</a></li>
+            </ul>
+          </div>
+        </div>
+      </aside>
+
+      <main id="container">
+        <div class="loading">
+          <div class="text">불러오는 중<i class="fas fa-spinner fa-spin"></i></div>
+        </div>
+        <div class="inner">
+          <header class="channel-header">
+            <div class="masthead">
+              <a href="#" class="site-title">ISSUE JOURNALIST</a>
+              <span class="live-pill"><i class="ph-dot-outline-fill"></i> LIVE DESK</span>
+            </div>
+            <div class="breaking-line">
+              <span>BREAKING</span>
+              <strong>컴백, 드라마, 예능, 화제성 흐름을 한눈에 정리합니다.</strong>
+            </div>
+          </header>
+
+          <section class="cover list_rep">
+            <h2 class="list_conform">오늘의 톱이슈</h2>
+            <article class="card">
+              <div class="thumb">
+                <img src="https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=1200&q=80" alt="콘서트 무대" onerror="this.remove()" />
+                <div class="noimg"><i class="ph-newspaper-bold"></i></div>
+                <div class="playbt"><a href="#"><i class="ph-arrow-right-bold"></i></a></div>
+              </div>
+              <a class="item_info" href="#">
+                <div class="item_title"><span>월드투어 추가 회차 발표, 팬덤 반응과 예매 포인트 정리</span></div>
+                <div class="item_date">05:14 업데이트</div>
+              </a>
+            </article>
+            <article class="card">
+              <div class="thumb">
+                <img src="https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&w=1200&q=80" alt="촬영 현장 카메라" onerror="this.remove()" />
+                <div class="noimg"><i class="ph-newspaper-bold"></i></div>
+                <div class="playbt"><a href="#"><i class="ph-arrow-right-bold"></i></a></div>
+              </div>
+              <a class="item_info" href="#">
+                <div class="item_title"><span>OTT 신작 라인업 공개, 첫 주 화제성에서 갈린 관전 포인트</span></div>
+                <div class="item_date">04:40 업데이트</div>
+              </a>
+            </article>
+            <article class="card">
+              <div class="thumb">
+                <img src="https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=1200&q=80" alt="스튜디오 마이크" onerror="this.remove()" />
+                <div class="noimg"><i class="ph-newspaper-bold"></i></div>
+                <div class="playbt"><a href="#"><i class="ph-arrow-right-bold"></i></a></div>
+              </div>
+              <a class="item_info" href="#">
+                <div class="item_title"><span>음원 차트 역주행 조짐, 라이브 클립 확산이 만든 변수</span></div>
+                <div class="item_date">03:25 업데이트</div>
+              </a>
+            </article>
+          </section>
+
+          <section class="cover list_rep">
+            <h2 class="list_conform">빠른 브리핑</h2>
+            <article class="gallery">
+              <div class="thumb">
+                <img src="https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?auto=format&fit=crop&w=900&q=80" alt="라이브 공연" onerror="this.remove()" />
+                <div class="noimg"><i class="ph-newspaper-bold"></i></div>
+                <div class="playbt"><a href="#"><i class="ph-arrow-right-bold"></i></a></div>
+              </div>
+              <a class="item_info" href="#">
+                <div class="item_title"><span>음악방송 1위 후보 변화</span></div>
+                <div class="item_date">뉴스 체크</div>
+              </a>
+            </article>
+            <article class="gallery">
+              <div class="thumb">
+                <img src="https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=900&q=80" alt="패션 화보" onerror="this.remove()" />
+                <div class="noimg"><i class="ph-newspaper-bold"></i></div>
+                <div class="playbt"><a href="#"><i class="ph-arrow-right-bold"></i></a></div>
+              </div>
+              <a class="item_info" href="#">
+                <div class="item_title"><span>공항 패션 포인트 모음</span></div>
+                <div class="item_date">트렌드</div>
+              </a>
+            </article>
+            <article class="gallery">
+              <div class="thumb">
+                <img src="https://images.unsplash.com/photo-1516280440614-37939bbacd81?auto=format&fit=crop&w=900&q=80" alt="무대 조명" onerror="this.remove()" />
+                <div class="noimg"><i class="ph-newspaper-bold"></i></div>
+                <div class="playbt"><a href="#"><i class="ph-arrow-right-bold"></i></a></div>
+              </div>
+              <a class="item_info" href="#">
+                <div class="item_title"><span>팬미팅 현장 반응</span></div>
+                <div class="item_date">현장</div>
+              </a>
+            </article>
+            <article class="gallery">
+              <div class="thumb">
+                <img src="https://images.unsplash.com/photo-1505236858219-8359eb29e329?auto=format&fit=crop&w=900&q=80" alt="공연 관객" onerror="this.remove()" />
+                <div class="noimg"><i class="ph-newspaper-bold"></i></div>
+                <div class="playbt"><a href="#"><i class="ph-arrow-right-bold"></i></a></div>
+              </div>
+              <a class="item_info" href="#">
+                <div class="item_title"><span>주간 화제성 순위</span></div>
+                <div class="item_date">랭킹</div>
+              </a>
+            </article>
+          </section>
+
+          <article>
+            <div class="article_info">
+              <div class="thumb">
+                <img src="https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=1400&q=80" alt="콘서트 무대" onerror="this.remove()" />
+                <div class="noimg"><i class="ph-newspaper-bold"></i></div>
+              </div>
+              <div class="info_text">
+                <div class="article_cate">컴백 브리핑</div>
+                <div class="article_title">신곡 공개 첫날 반응, 차트보다 먼저 봐야 할 세 가지 지표</div>
+                <div class="article_date">5월 14일 업데이트</div>
+                <div class="article_bottom">
+                  <a class="subscribe-button" href="#"><i class="ph-bell-ringing-bold"></i>구독하기</a>
+                  <div class="admin">
+                    <a href="#"><i class="ph-pencil-bold"></i>수정</a>
+                    <a href="#"><i class="ph-trash-bold"></i>삭제</a>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="article">
+              <p>신곡 공개 직후에는 순위만 보는 것보다 유입 경로와 클립 확산 속도를 함께 보는 편이 정확합니다. 이번 정리는 기사 여러 건을 모아 팬덤 반응, 플랫폼별 노출, 방송 일정까지 한 번에 읽히도록 구성한 예시입니다.</p>
+              <h2>핵심 흐름</h2>
+              <p>첫 반응은 숏폼 클립과 라이브 영상에서 먼저 움직였고, 이후 포털 검색량과 커뮤니티 언급량이 따라붙는 흐름입니다. 블로그 본문은 카드형 첫 화면과 이어지는 긴 글 모두 뉴스 채널처럼 보이도록 폭과 타이포그래피를 조정했습니다.</p>
+              <blockquote data-ke-style="style2">핵심 원인: 기존 스킨은 1000px x 550px 고정 창 구조라 실제 기사형 블로그에서 정보 밀도가 너무 낮았습니다.</blockquote>
+              <p>이제 PC에서는 좌측 데스크와 중앙 기사 영역이 분리되고, 모바일에서는 하단 탭과 슬라이드 메뉴로 읽는 흐름이 이어집니다.</p>
+            </div>
+            <div class="tagTrail">
+              <a href="#">컴백</a>
+              <a href="#">차트</a>
+              <a href="#">팬덤반응</a>
+            </div>
+            <div class="cmt_toggle"><i class="ph-chat-centered-text-bold"></i>댓글</div>
+          </article>
+
+          <div class="paging">
+            <a href="#"><i class="ph-caret-circle-left-fill"></i>이전</a>
+            <a href="#">다음<i class="ph-caret-circle-right-fill"></i></a>
+          </div>
+
+          <div class="footer">
+            <a href="#"><i class="ph-house-bold"></i><span>홈</span></a>
+            <a class="toggle"><i class="ph-cube-bold"></i><span>메뉴</span></a>
+            <a href="#"><i class="ph-chat-teardrop-dots-bold"></i><span>메시지</span></a>
+          </div>
+        </div>
+      </main>
+    </div>
+    <script>
+      document.querySelector(".footer .toggle")?.addEventListener("click", () => {
+        document.querySelector("#sidebar")?.classList.add("open");
+        document.querySelector(".sidebar-bg").style.display = "block";
+      });
+      document.querySelector(".sidebar-bg")?.addEventListener("click", () => {
+        document.querySelector("#sidebar")?.classList.remove("open");
+        document.querySelector(".sidebar-bg").style.display = "none";
+      });
+    </script>
+  </body>
+</html>
