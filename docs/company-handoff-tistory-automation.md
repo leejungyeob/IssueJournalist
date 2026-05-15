@@ -84,6 +84,7 @@ python3 scripts/run_tistory_pipeline.py
 ```text
 drafts/YYYY-MM-DD/
   post-title.txt
+  post-title-candidates.txt
   post-tags.txt
   cover.png
   cover.svg
@@ -95,9 +96,10 @@ drafts/YYYY-MM-DD/
 티스토리에 실제로 넣을 파일:
 
 - `post-title.txt`: 제목
+- `post-title-candidates.txt`: 제목 후보 3개
 - `post-tags.txt`: 태그
 - `cover.png`: 대표이미지
-- `tistory-ready.html`: 본문 HTML
+- `tistory-ready.html`: 본문 HTML. 기사 복붙형 문장 대신 블로그식 정리 흐름으로 작성되며, 본문 중간에 공식 이미지/SNS 임베드/방송사 제공 이미지 위주의 삽입 추천 블록이 들어간다.
 
 ## 4-1. 시간당 5개 개별글 생성
 
@@ -120,6 +122,7 @@ drafts/YYYY-MM-DD/HH/
   post-01/
     enriched.json
     post-title.txt
+    post-title-candidates.txt
     post-tags.txt
     cover.png
     cover.svg

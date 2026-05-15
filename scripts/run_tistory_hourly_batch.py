@@ -165,6 +165,7 @@ def run_batch(config: dict, output_dir: Path, record_history: bool) -> int:
         html_path = post_dir / "tistory-ready.html"
         enriched_path = post_dir / "enriched.json"
         title_path = post_dir / "post-title.txt"
+        title_candidates_path = post_dir / "post-title-candidates.txt"
         tags_path = post_dir / "post-tags.txt"
         cover_svg = post_dir / "cover.svg"
         cover_png = post_dir / "cover.png"
@@ -196,6 +197,8 @@ def run_batch(config: dict, output_dir: Path, record_history: bool) -> int:
                 str(html_path),
                 "--title-output",
                 str(title_path),
+                "--title-candidates-output",
+                str(title_candidates_path),
                 "--tags-output",
                 str(tags_path),
                 "--base-tags",
@@ -235,6 +238,7 @@ def run_batch(config: dict, output_dir: Path, record_history: bool) -> int:
                 "post_dir": str(post_dir),
                 "enriched": str(enriched_path),
                 "title": str(title_path),
+                "title_candidates": str(title_candidates_path),
                 "tags": str(tags_path),
                 "html": str(html_path),
                 "cover": str(cover_png if cover_png.exists() else cover_svg),

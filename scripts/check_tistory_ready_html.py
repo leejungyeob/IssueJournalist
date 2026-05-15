@@ -27,6 +27,9 @@ FORBIDDEN_PATTERNS = [
     "작성 기준",
     "자동 수집",
     "초안입니다",
+    "화제가 되고 있습니다",
+    "귀추가 주목됩니다",
+    "관심이 집중되고 있습니다",
 ]
 
 
@@ -41,6 +44,7 @@ class TistoryHTMLParser(HTMLParser):
         self.issue_sections = 0
         self.toc_links = 0
         self.source_bookmarks = 0
+        self.image_recommendations = 0
         self._in_title = False
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
@@ -61,6 +65,8 @@ class TistoryHTMLParser(HTMLParser):
             self.toc_links += 1
         elif "source-bookmark" in attr_map.get("class", "").split():
             self.source_bookmarks += 1
+        elif "image-recommendation" in attr_map.get("class", "").split():
+            self.image_recommendations += 1
 
     def handle_endtag(self, tag: str) -> None:
         if tag == "title":
@@ -118,6 +124,8 @@ def main() -> int:
         errors.append(f"toc link count {parsed.toc_links} does not match issue section count {parsed.issue_sections}")
     if parsed.source_bookmarks < 1:
         errors.append("missing source bookmark")
+    if not 2 <= parsed.image_recommendations <= 4:
+        errors.append(f"expected 2-4 image recommendations, found {parsed.image_recommendations}")
 
     tags = tag_count(args.tags_file)
     if tags is not None and tags != 10:
@@ -130,7 +138,8 @@ def main() -> int:
 
     print(
         "OK: publish-ready checks passed "
-        f"(h1=1, issues={parsed.issue_sections}, toc={parsed.toc_links}, bookmarks={parsed.source_bookmarks})"
+        f"(h1=1, issues={parsed.issue_sections}, toc={parsed.toc_links}, "
+        f"bookmarks={parsed.source_bookmarks}, images={parsed.image_recommendations})"
     )
     return 0
 
