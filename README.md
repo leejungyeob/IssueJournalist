@@ -2,6 +2,8 @@
 
 연예 뉴스 수집부터 티스토리 게시용 HTML 초안 생성까지 돕는 반자동 블로그 운영 워크스페이스입니다.
 
+현재 운영 방향은 티스토리입니다. 네이버 블로그 글쓰기 API는 현재 호출되지 않아 보류하고, 티스토리는 HTML/대표이미지 생성 후 수동 복붙을 기본값으로 둡니다.
+
 ## 설정
 
 네이버 뉴스 검색 API 키는 `.env`에 저장합니다.
@@ -17,6 +19,38 @@ NAVER_CLIENT_SECRET=
 
 ```bash
 python3 scripts/check_naver_api.py
+```
+
+## 티스토리 파이프라인 실행
+
+사전 확인:
+
+```bash
+python3 scripts/run_tistory_pipeline.py --preflight
+```
+
+오늘 초안 생성:
+
+```bash
+python3 scripts/run_tistory_pipeline.py
+```
+
+생성물은 `drafts/YYYY-MM-DD/` 아래에 저장됩니다.
+
+```text
+post-title.txt
+post-tags.txt
+cover.png
+cover.svg
+tistory-ready.html
+seed.html
+latest-entertainment-news.json
+```
+
+회사/집에서 이어서 볼 작업 메모는 아래 문서를 기준으로 합니다.
+
+```bash
+docs/company-handoff-tistory-automation.md
 ```
 
 ## 뉴스 수집

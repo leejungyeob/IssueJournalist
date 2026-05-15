@@ -1,5 +1,8 @@
 # 회사에서 이어서 실행할 작업
 
+> 보류됨: 네이버 블로그 글쓰기/카테고리 API가 현재 `API does not exist`로 응답해서 이 방향은 중단했다.
+> 현재 이어서 볼 문서는 `docs/company-handoff-tistory-automation.md`다.
+
 ## 현재 상태
 
 네이버 블로그 완전 자동화 방향으로 전환했다.

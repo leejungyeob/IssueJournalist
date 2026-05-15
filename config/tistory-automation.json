@@ -1,0 +1,24 @@
+{
+  "target": "tistory",
+  "mode": "semi_auto",
+  "publish_mode": "manual_copy",
+  "posts_per_run": 1,
+  "news_display_per_query": 40,
+  "news_limit": 12,
+  "tags": [
+    "연예뉴스",
+    "오늘의연예뉴스",
+    "연예이슈",
+    "아이돌",
+    "배우",
+    "드라마",
+    "예능",
+    "K팝",
+    "컴백",
+    "시청률"
+  ],
+  "browser_publish": {
+    "enabled": false,
+    "first_step": "draft_save"
+  }
+}

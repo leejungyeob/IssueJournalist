@@ -7,6 +7,7 @@ import html
 import json
 import os
 import re
+import ssl
 import sys
 import urllib.error
 import urllib.parse
@@ -20,6 +21,10 @@ from zoneinfo import ZoneInfo
 ROOT = Path(__file__).resolve().parents[1]
 ENV_PATH = ROOT / ".env"
 KST = ZoneInfo("Asia/Seoul")
+CERT_PATHS = [
+    Path("/etc/ssl/cert.pem"),
+    Path("/opt/homebrew/etc/openssl@3/cert.pem"),
+]
 
 DEFAULT_QUERIES = ["연예", "아이돌", "배우", "드라마", "예능", "K팝", "컴백", "시청률"]
 IMPORTANT_KEYWORDS = [
@@ -151,6 +156,13 @@ def domain_from_url(value: str) -> str:
     return parsed.netloc.removeprefix("www.")
 
 
+def ssl_context() -> ssl.SSLContext:
+    for path in CERT_PATHS:
+        if path.exists():
+            return ssl.create_default_context(cafile=str(path))
+    return ssl.create_default_context()
+
+
 def keyword_hits(text: str, keywords: list[str]) -> list[str]:
     return [keyword for keyword in keywords if keyword in text]
 
@@ -213,7 +225,7 @@ def fetch_news(query: str, display: int, client_id: str, client_secret: str) -> 
     request.add_header("X-Naver-Client-Id", client_id)
     request.add_header("X-Naver-Client-Secret", client_secret)
 
-    with urllib.request.urlopen(request, timeout=15) as response:
+    with urllib.request.urlopen(request, timeout=15, context=ssl_context()) as response:
         payload = json.loads(response.read().decode("utf-8"))
     return payload.get("items", [])
 

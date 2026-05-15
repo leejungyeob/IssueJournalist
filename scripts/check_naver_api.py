@@ -5,6 +5,7 @@ import html
 import json
 import os
 import re
+import ssl
 import sys
 import urllib.error
 import urllib.parse
@@ -14,6 +15,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 ENV_PATH = ROOT / ".env"
+CERT_PATHS = [
+    Path("/etc/ssl/cert.pem"),
+    Path("/opt/homebrew/etc/openssl@3/cert.pem"),
+]
 
 
 def load_dotenv(path: Path) -> None:
@@ -45,6 +50,13 @@ def clean_news_text(text: str) -> str:
     return re.sub(r"\s+", " ", text).strip()
 
 
+def ssl_context() -> ssl.SSLContext:
+    for path in CERT_PATHS:
+        if path.exists():
+            return ssl.create_default_context(cafile=str(path))
+    return ssl.create_default_context()
+
+
 def main() -> int:
     load_dotenv(ENV_PATH)
 
@@ -66,7 +78,7 @@ def main() -> int:
     request.add_header("X-Naver-Client-Secret", client_secret)
 
     try:
-        with urllib.request.urlopen(request, timeout=10) as response:
+        with urllib.request.urlopen(request, timeout=10, context=ssl_context()) as response:
             payload = json.loads(response.read().decode("utf-8"))
     except urllib.error.HTTPError as exc:
         body = exc.read().decode("utf-8", errors="replace")
