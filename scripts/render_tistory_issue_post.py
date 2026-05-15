@@ -826,15 +826,11 @@ def render_html(item: dict, tags: list[str], related_articles: list[dict] | None
     related_articles = related_articles or []
     images = images or []
     summary = excerpt(blog_summary(item, related_articles), 150)
-    related_block = render_related_articles(related_articles)
     image_blocks = render_images(item, images)
     news_summary = "\n".join(f"      <p>{escape(paragraph)}</p>" for paragraph in news_summary_paragraphs(item))
     interest = interest_paragraph(item, related_articles)
-    public_reaction = public_reaction_paragraph(item, related_articles)
-    extra_context = extra_context_paragraph(item, related_articles)
     closing = closing_paragraph(item, related_articles)
     detail_heading = section_two_heading(item)
-    extra_heading = section_four_heading(item)
 
     return f"""<!doctype html>
 <html lang="ko">
@@ -944,27 +940,11 @@ def render_html(item: dict, tags: list[str], related_articles: list[dict] | None
     <section id="issue-2">
       <h2>{escape(detail_heading)}</h2>
       <p>{escape(interest)}</p>
-      <p>그래서 이 글에서는 확인된 발언과 기사에 나온 배경만 중심으로 정리했습니다.</p>
     </section>
 
     <section id="issue-3">
-      <h2>기사 속 반응 정리</h2>
-      <p>{escape(public_reaction)}</p>
-      <p>비슷한 내용으로 함께 확인한 기사도 아래에 남겨둡니다.</p>
-{related_block}
-{image_blocks["reaction"]}
-    </section>
-
-    <section id="issue-4">
-      <h2>{escape(extra_heading)}</h2>
-      <p>{escape(extra_context)}</p>
-      <p>확인되지 않은 내용은 따로 키우지 않고, 기사에 나온 내용만 기준으로 보는 게 맞겠습니다.</p>
-    </section>
-
-    <section id="issue-5">
       <h2>마무리</h2>
       <p>{escape(closing)}</p>
-      <p>지금은 여기까지 확인하고 넘어가면 될 것 같습니다.</p>
       <div class="source-bookmark">
         <a href="{url}" target="_blank" rel="noopener noreferrer">원문 기사: {escape(original_title)}</a>
         <span>{escape(domain)}</span>
