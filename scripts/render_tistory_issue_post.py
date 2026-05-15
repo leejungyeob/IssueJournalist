@@ -1207,10 +1207,12 @@ def render_image(image: dict, entity: str, caption: str) -> str:
     source_name = clean_text(image.get("source_name") or "원문")
     source_url = clean_text(image.get("source_article_url") or "")
     caption_text = f"{caption} " if caption else ""
+    caption_style = "color:#aaa !important;font-size:10px !important;line-height:1.4;margin-top:4px;text-align:right;"
+    source_style = "color:#aaa !important;display:block;font-size:10px !important;font-weight:400 !important;line-height:1.4;margin-top:4px;text-align:right;text-decoration:none !important;opacity:.65;"
     return f"""
       <figure class="news-image">
         <img src="{escape(image.get("url", ""))}" alt="{escape(entity)} 관련 이미지" loading="lazy">
-        <figcaption>{escape(caption_text)}<a href="{escape(source_url)}" target="_blank" rel="noopener noreferrer">이미지 출처: {escape(source_name)}</a></figcaption>
+        <figcaption style="{caption_style}">{escape(caption_text)}<a href="{escape(source_url)}" target="_blank" rel="noopener noreferrer" style="{source_style}">출처: {escape(source_name)}</a></figcaption>
       </figure>
 """.rstrip()
 
@@ -1313,9 +1315,21 @@ def render_html(item: dict, tags: list[str], related_articles: list[dict] | None
       width: 100%;
     }}
     .news-image figcaption {{
-      color: #666;
-      font-size: 13px;
-      margin-top: 8px;
+      color: #aaa;
+      font-size: 10px;
+      line-height: 1.4;
+      margin-top: 4px;
+      text-align: right;
+    }}
+    .news-image figcaption a {{
+      color: #aaa !important;
+      display: block;
+      font-size: 10px;
+      font-weight: 400;
+      line-height: 1.4;
+      margin-top: 4px;
+      text-align: right;
+      text-decoration: none;
     }}
     .tags {{
       color: #555;
