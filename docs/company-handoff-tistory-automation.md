@@ -25,16 +25,14 @@
 07, 08, 09, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 00, 01, 02
 ```
 
-현재 코드는 이 최종 목표가 아니라, `하루 1개 묶음글 생성`까지만 된다.
+현재 코드는 `시간당 5개 개별글 생성`까지 된다. 티스토리 브라우저 자동 입력/임시저장/발행은 아직 구현 전이다.
 
 최종 목표를 위해 필요한 추가 구현:
 
-1. 시간당 5개 이슈를 뽑는 큐 생성기
-2. 1개 이슈를 1개 티스토리 글로 렌더링하는 스크립트
-3. 중복 발행 방지용 발행 로그
-4. 티스토리 에디터 브라우저 자동화
-5. 최초에는 자동 `임시저장`, 안정화 후 자동 `발행`
-6. 스케줄러 등록
+1. 중복 발행 방지용 발행 로그
+2. 티스토리 에디터 브라우저 자동화
+3. 최초에는 자동 `임시저장`, 안정화 후 자동 `발행`
+4. 스케줄러 등록
 
 주의: 티스토리 Open API는 종료 공지가 있으므로 공식 API 발행이 아니라 브라우저 자동화 기준으로 구현한다.
 
@@ -94,6 +92,38 @@ drafts/YYYY-MM-DD/
 - `cover.png`: 대표이미지
 - `tistory-ready.html`: 본문 HTML
 
+## 4-1. 시간당 5개 개별글 생성
+
+```bash
+python3 scripts/run_tistory_hourly_batch.py
+```
+
+현재 시간이 설정된 운영 시간대가 아니어도 테스트하려면:
+
+```bash
+python3 scripts/run_tistory_hourly_batch.py --force
+```
+
+생성 위치:
+
+```text
+drafts/YYYY-MM-DD/HH/
+  latest-entertainment-news.json
+  manifest.json
+  post-01/
+    post-title.txt
+    post-tags.txt
+    cover.png
+    cover.svg
+    tistory-ready.html
+  post-02/
+  post-03/
+  post-04/
+  post-05/
+```
+
+개별글마다 폴더를 분리한다.
+
 ## 5. 현재 설정
 
 ```json
@@ -101,9 +131,9 @@ drafts/YYYY-MM-DD/
   "target": "tistory",
   "mode": "semi_auto",
   "publish_mode": "manual_copy",
-  "posts_per_run": 1,
+  "posts_per_run": 5,
   "news_display_per_query": 40,
-  "news_limit": 12
+  "news_limit": 30
 }
 ```
 
@@ -111,7 +141,7 @@ drafts/YYYY-MM-DD/
 
 ## 6. 다음 구현 순서
 
-1. 현재 생성물로 티스토리 수동 게시 흐름을 한 번 검증한다.
+1. 시간당 5개 생성물로 티스토리 수동 게시 흐름을 한 번 검증한다.
 2. `tistory-ready.html` 품질을 높인다.
 3. 티스토리 글쓰기 화면 브라우저 자동화 스크립트를 만든다.
 4. 처음에는 `임시저장`까지만 자동화한다.

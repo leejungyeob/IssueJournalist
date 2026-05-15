@@ -22,6 +22,12 @@ python3 scripts/run_tistory_pipeline.py --preflight
 python3 scripts/run_tistory_pipeline.py
 ```
 
+시간당 5개 개별글 배치 생성:
+
+```bash
+python3 scripts/run_tistory_hourly_batch.py
+```
+
 생성물은 `drafts/YYYY-MM-DD/` 아래에 저장됩니다.
 
 ```text
@@ -32,6 +38,24 @@ cover.svg
 tistory-ready.html
 seed.html
 latest-entertainment-news.json
+```
+
+시간당 배치 생성물은 `drafts/YYYY-MM-DD/HH/` 아래에서 개별글마다 폴더를 나눕니다.
+
+```text
+drafts/YYYY-MM-DD/HH/
+  latest-entertainment-news.json
+  manifest.json
+  post-01/
+    post-title.txt
+    post-tags.txt
+    cover.png
+    cover.svg
+    tistory-ready.html
+  post-02/
+  post-03/
+  post-04/
+  post-05/
 ```
 
 회사/집에서 이어서 볼 작업 메모는 아래 문서를 기준으로 합니다.
