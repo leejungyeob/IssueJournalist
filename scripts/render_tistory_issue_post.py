@@ -40,6 +40,18 @@ ENTITY_STOPWORDS = {
     "반응",
     "소식",
     "정리",
+    "시험관",
+    "시도",
+    "난임센터",
+    "현실",
+    "고백",
+    "연애",
+    "관계",
+    "여성",
+    "여성과",
+    "동시",
+    "조화로운",
+    "있어야",
 }
 NOISY_TERM_SUFFIXES = (
     "는데",
@@ -248,6 +260,18 @@ def title_candidates(item: dict) -> list[str]:
             f"{entity} {partner} 목격담, 너무 크게 볼 일은 아닌 이유",
             f"{entity} {partner} 관련 소식, 가볍게 정리해봄",
         ]
+    elif "김지민" in title and any(keyword in title for keyword in ["시험관", "난임센터"]):
+        candidates = [
+            "김지민 시험관 시술 고백, 난임센터 현실까지",
+            "김지민 난임센터 이야기, 방송에서 나온 현실",
+            "김지민 시험관 근황 정리, 담담해서 더 남는 말",
+        ]
+    elif "니요" in title and any(keyword in title for keyword in ["동시 연애", "관계"]):
+        candidates = [
+            "니요 세 여성과 동시 연애, 본인이 밝힌 관계",
+            "니요 3년째 조화로운 관계, 기사 내용 정리",
+            "니요 다자 연애 고백, 선택권 언급까지",
+        ]
     elif "컴백" in title or "컴백" in (item.get("important_keywords") or []):
         candidates = [
             f"{entity} 컴백 소식, 팬들이 먼저 본 포인트",
@@ -263,8 +287,8 @@ def title_candidates(item: dict) -> list[str]:
     else:
         candidates = [
             f"{entity} 관련 이야기, 오늘 나온 내용만 정리",
-            f"{entity} 소식이 눈길을 끈 이유",
-            f"{secondary or entity} 흐름 정리, 기사보다 쉽게 보기",
+            f"{entity} 소식, 기사에서 나온 말은 이랬다",
+            f"{secondary or entity} 흐름 정리, 반응까지 쉽게 보기",
         ]
     return [clamp_title(candidate, 64) for candidate in unique_strings(candidates)[:3]]
 
@@ -276,25 +300,66 @@ def blog_title(item: dict) -> str:
 def blog_summary(item: dict, related_articles: list[dict]) -> str:
     entity = lead_entity(item)
     title = clean_text(item.get("title", ""))
-    related_count = len(related_articles)
+    sentences = article_sentences(item)
     if "아이오아이" in title and any(keyword in title for keyword in ["신곡", "반응", "강미나"]):
         return (
-            "아이오아이 10주년 신곡 관련 기사가 올라왔습니다. "
-            "먼저 공개된 챌린지와 기사에 언급된 반응을 중심으로 정리했습니다."
+            "아이오아이 신곡 이야기는 기대가 컸던 만큼 반응도 빨리 갈렸습니다. "
+            "10주년 앨범 소식에 먼저 공개된 챌린지까지 붙으면서 팬들 사이에서도 말이 꽤 나왔어요. "
+            "아직 전체 곡을 다 들은 상황은 아니라서, 지금은 기사에 나온 장면과 반응만 차분히 보면 됩니다. "
+            "결국 핵심은 컴백 자체보다 첫 공개 구간이 어떤 인상을 남겼느냐에 가까워 보입니다."
         )
     if all(keyword in title for keyword in ["김연아", "고우림"]) and "강남" in title:
         return (
-            "김연아·고우림 부부 이야기가 예능 예고 속 강남의 한마디로 다시 언급됐습니다. "
-            "핵심은 부부싸움 자체라기보다 방송에서 나온 가벼운 에피소드에 가깝습니다."
+            "김연아·고우림 부부 이야기는 예능 예고 속 한마디에서 시작됐습니다. "
+            "제목만 보면 부부싸움처럼 크게 보일 수 있지만, 실제로는 강남이 받아친 농담에 가까운 장면입니다. "
+            "그래서 이 이슈는 갈등이라기보다 부부들의 생활 토크가 기사 제목으로 커진 흐름으로 보는 편이 맞습니다. "
+            "방송이 공개되면 분위기는 훨씬 가볍게 느껴질 가능성이 있습니다."
         )
-    if related_count:
+    if "한예리" in title and ("백상" in title or "워스트" in title):
         return (
-            f"{entity} 관련 기사가 올라왔습니다. "
-            f"원문과 함께 나온 기사 {related_count}건에서 확인되는 내용만 짧게 정리했습니다."
+            "한예리의 백상예술대상 드레스 이야기가 다시 올라왔습니다. "
+            "워스트 드레서 반응까지 붙었지만, 정작 한예리는 꽤 담담하게 자기 생각을 남겼어요. "
+            "꽃 장식이 큰 화이트 드레스라 온라인에서 호불호가 갈렸고, 그 반응을 본 뒤 직접 글을 올린 흐름입니다. "
+            "드레스가 예뻤냐 아니냐보다, 본인이 그 선택을 어떻게 받아들였는지가 더 남는 이야기입니다."
+        )
+    if item.get("safety_flags"):
+        return (
+            f"{entity} 관련 이야기는 방송 장면과 온라인 주장성 내용이 같이 묶이면서 커졌습니다. "
+            "제목에 센 표현이 들어가다 보니 더 크게 보이지만, 지금은 확인된 내용과 추측처럼 보이는 부분을 나눠서 보는 게 먼저입니다. "
+            "특히 임신설이나 편집 요구설처럼 민감한 말은 기사에 나온 표현 그대로 사실처럼 받아들이기 어렵습니다. "
+            "본문에서는 어디까지가 기사 내용이고 어디부터 조심해야 하는지 위주로 정리했습니다."
+        )
+    if "김지민" in title and any(keyword in title for keyword in ["시험관", "난임센터"]):
+        return (
+            "김지민이 시험관 시술 중 겪고 있는 이야기를 방송에서 꺼냈습니다. "
+            "난임센터에 사람이 많아 앉을 자리도 없었다는 말이 기사에 담기면서 현실적인 반응도 함께 붙었어요. "
+            "가벼운 예능 토크라기보다 본인이 지나고 있는 과정을 조심스럽게 말한 장면에 가깝습니다. "
+            "그래서 이번 내용은 자극적인 소식보다 담담한 근황 고백으로 보는 편이 자연스럽습니다."
+        )
+    if "니요" in title and any(keyword in title for keyword in ["동시 연애", "관계"]):
+        return (
+            "니요가 세 여성과 함께 지내는 관계를 직접 설명했습니다. "
+            "동시 연애라는 표현만 보면 자극적으로 보일 수 있지만, 기사에서 본인이 강조한 건 모두가 알고 선택했다는 부분이었습니다. "
+            "아이들과 함께 생활한다는 내용과 일부 계약 무산 이야기도 같이 언급됐습니다. "
+            "사생활 이슈인 만큼 판단을 앞세우기보다 기사에 나온 설명부터 차분히 보는 게 맞겠습니다."
+        )
+    first_raw = first_meaningful_sentence(sentences) if sentences else ""
+    first = soften_sentence(first_raw, 170) if first_raw else ""
+    context_raw = contextual_sentence(item, ["방송", "영상", "공개", "발매", "출연", "소속사", "휴식", "안정"])
+    if strip_article_noise(context_raw) == strip_article_noise(first_raw):
+        context_raw = ""
+    context = soften_sentence(context_raw, 160) if context_raw else ""
+    if first and context:
+        return (
+            f"{entity} 관련해서 오늘 새로 나온 이야기는 이 부분입니다. "
+            f"{first} "
+            f"{context} "
+            "본문에서는 확인된 내용과 반응이 왜 붙었는지 위주로 보면 됩니다."
         )
     return (
         f"{entity} 관련 이야기가 새로 올라왔습니다. "
-        "본문에서는 기사에 나온 내용과 확인된 발언만 중심으로 정리했습니다."
+        "크게 부풀려 보기보다는 기사에 나온 사실과 그 주변 반응을 나눠서 보는 쪽이 좋겠습니다. "
+        "본문에서는 핵심 포인트를 몇 개로 나눠 정리했습니다."
     )
 
 
@@ -338,16 +403,22 @@ def soften_sentence(sentence: str, max_len: int = 170) -> str:
         "일부 네티즌들은": "일부에서는",
         "솔직한 생각을 밝혔다": "직접 생각을 남겼습니다",
         "입장을 밝혔다": "입장을 전했습니다",
+        "토로했다": "털어놨습니다",
         "근황을 공개했다": "근황을 공개했습니다",
         "공개했다": "공개했습니다",
         "공개됐다": "공개됐습니다",
+        "공개된다": "공개됩니다",
         "밝혔다": "이야기했습니다",
+        "밝혀 놀라움을 자아낸다": "밝혔습니다",
         "발매한다": "발매합니다",
         "게재했다": "올렸습니다",
         "전했다": "전했습니다",
         "설명했다": "설명했습니다",
+        "설명했다.": "설명했습니다.",
         "언급했다": "언급했습니다",
         "덧붙였다": "덧붙였습니다",
+        "공감을 안긴다": "공감을 안겼습니다",
+        "무산됐다고도 했다": "무산됐다고도 했습니다",
         "주장이 제기됐다": "주장이 나왔습니다",
         "소신을 드러냈다": "자기 생각을 분명히 했습니다",
         "눈길을 끌었다": "눈에 들어온 대목입니다",
@@ -359,6 +430,7 @@ def soften_sentence(sentence: str, max_len: int = 170) -> str:
         "파장이 일고 있다": "말이 이어지고 있습니다",
         "시청자들의 공분을 사고 있다": "시청자들 사이에서 불편하다는 반응도 나오고 있습니다",
         "공분을 사고 있다": "불편하다는 반응도 나오고 있습니다",
+        "온라인이 발칵 뒤집혔다": "온라인에서 말이 크게 번졌습니다",
         "발칵 뒤집혔다": "말이 크게 번졌습니다",
         "관심이 쏠린다": "이어질 여지도 있어 보입니다",
         "이어졌다": "이어졌습니다",
@@ -370,6 +442,11 @@ def soften_sentence(sentence: str, max_len: int = 170) -> str:
     }
     for before, after in replacements.items():
         sentence = sentence.replace(before, after)
+    sentence = re.sub(r"했다([.。]?)$", r"했습니다\1", sentence)
+    sentence = re.sub(r"됐다([.。]?)$", r"됐습니다\1", sentence)
+    sentence = re.sub(r"한다([.。]?)$", r"합니다\1", sentence)
+    sentence = re.sub(r"된다([.。]?)$", r"됩니다\1", sentence)
+    sentence = re.sub(r"자아낸다([.。]?)$", r"자아냈습니다\1", sentence)
     return excerpt(sentence, max_len)
 
 
@@ -539,6 +616,203 @@ def news_summary_paragraphs(item: dict) -> list[str]:
     if sentences:
         return general_news_summary(item, sentences)
     return [core_summary_fallback(item)]
+
+
+def section_fact(sentence: str, fallback: str) -> str:
+    fact = soften_sentence(sentence, 220) if sentence else fallback
+    return fact
+
+
+def pick_section_sentence(sentences: list[str], keywords: list[str], used: set[str]) -> str:
+    for sentence in sentences:
+        cleaned = strip_article_noise(sentence)
+        if cleaned in used:
+            continue
+        if any(keyword in cleaned for keyword in keywords):
+            used.add(cleaned)
+            return sentence
+    for sentence in sentences:
+        cleaned = strip_article_noise(sentence)
+        if cleaned and cleaned not in used:
+            used.add(cleaned)
+            return sentence
+    return ""
+
+
+def hanyeri_blog_sections(item: dict) -> list[tuple[str, list[str]]]:
+    return [
+        (
+            "워스트 드레서로 언급된 드레스",
+            [
+                "한예리는 제62회 백상예술대상 레드카펫에 꽃 장식이 크게 들어간 화이트 드레스를 입고 참석했습니다. 기사에서 크게 잡힌 부분은 이 드레스가 일부 온라인에서 '워스트 드레서'로 언급됐다는 점이었습니다.",
+                "사진 한 장만 놓고 보면 스타일 호불호는 당연히 갈릴 수 있습니다. 다만 이번 이야기는 드레스가 예뻤다, 아니었다를 따지는 것보다 당사자가 그 반응을 어떻게 받아들였는지가 더 눈에 들어왔어요.",
+            ],
+        ),
+        (
+            "한예리가 직접 남긴 말",
+            [
+                "가장 중요한 건 한예리가 직접 남긴 말입니다. 그는 누가 뭐래도 자신의 드레스가 가장 예뻤고, 입고 싶은 드레스를 입었을 뿐이라는 취지의 글을 올렸습니다.",
+                "워스트 평가에 길게 상처를 드러냈다기보다는, 내가 고른 스타일이고 나는 만족했다는 쪽에 가까웠습니다. 그래서 반박이라기보다 자기 선택을 담담하게 정리한 글처럼 읽혔습니다.",
+            ],
+        ),
+        (
+            "달걀프라이 반응까지 나온 이유",
+            [
+                "온라인에서는 가슴 부분의 꽃 장식을 두고 '달걀프라이 같다'는 식의 반응도 나왔습니다. 이런 표현이 붙으면서 단순한 시상식 패션 이야기가 조금 더 크게 번진 것으로 보입니다.",
+                "다만 이런 말은 금방 자극적으로 소비되기 쉽습니다. 실제로 남겨야 할 건 조롱성 표현이 아니라, 한예리가 왜 그 드레스를 선택했고 본인은 어떤 마음이었는지에 가깝습니다.",
+            ],
+        ),
+        (
+            "무난하지 않아도 된다는 선택",
+            [
+                "한예리는 스태프들이 최선을 다해줬고, 시상식이라고 해서 매번 무난할 필요는 없다는 말도 덧붙였습니다. 이 대목에서 이번 글의 방향이 꽤 분명해졌습니다.",
+                "레드카펫 의상이 늘 모두에게 같은 평가를 받을 수는 없습니다. 그래도 본인이 입고 싶은 스타일을 고르고, 그 선택을 스스로 좋았다고 말한 점은 충분히 남길 만한 포인트였습니다.",
+            ],
+        ),
+    ]
+
+
+def ioi_blog_sections(item: dict) -> list[tuple[str, list[str]]]:
+    return [
+        (
+            "갑자기 공개된 챌린지",
+            [
+                "아이오아이 신곡 이야기는 타이틀곡 '갑자기' 챌린지가 먼저 공개되면서 시작됐습니다. 제목 그대로 갑자기 나온 짧은 구간이라 팬들 입장에서는 반응이 빨리 갈릴 수밖에 없었습니다.",
+                "짧은 챌린지 영상은 곡 전체를 판단하기엔 부족하지만 첫인상은 꽤 강하게 남깁니다. 기대가 컸던 팀일수록 몇 초짜리 구간에도 말이 많이 붙는 이유가 여기에 있습니다.",
+            ],
+        ),
+        (
+            "10주년 앨범 루프",
+            [
+                "기사에 따르면 아이오아이는 데뷔 10주년을 기념해 세 번째 미니앨범 '루프'를 발매합니다. 오랜만에 팀 이름으로 나오는 소식이라 팬들의 기대도 자연스럽게 커졌습니다.",
+                "그래서 이번 반응은 단순히 신곡 하나에 대한 평가만은 아닙니다. 10주년이라는 시간, 다시 모인다는 의미, 각 멤버를 기다려온 팬심이 한꺼번에 섞인 흐름에 가깝습니다.",
+            ],
+        ),
+        (
+            "엇갈린 신곡 반응",
+            [
+                "기사에는 곡 분위기를 두고 아쉽다는 반응과 묘하게 중독성이 있다는 반응이 함께 소개됐습니다. 일부는 트로트 느낌이 난다고 봤고, 일부는 오히려 그 점이 기억에 남는다고 본 셈입니다.",
+                "이런 반응은 완전히 이상한 흐름은 아닙니다. 익숙한 팀의 오랜만의 신곡일수록 팬들이 머릿속에 갖고 있던 기대치가 달라서, 같은 구간을 듣고도 평가가 갈라질 수 있습니다.",
+            ],
+        ),
+        (
+            "강미나 언급이 붙은 이유",
+            [
+                "제목에는 강미나 이름도 함께 언급됐습니다. 신곡 반응이 갈리다 보니, 참여 여부나 팀 활동을 둘러싼 팬들의 아쉬움까지 같이 붙은 것으로 보입니다.",
+                "다만 지금 단계에서 한 사람의 선택을 신곡 평가와 바로 연결해 단정할 필요는 없습니다. 전체 곡이 공개된 뒤에야 이번 반응이 첫인상에 그칠지, 실제 평가로 이어질지 볼 수 있습니다.",
+            ],
+        ),
+    ]
+
+
+def sensitive_blog_sections(item: dict) -> list[tuple[str, list[str]]]:
+    entity = lead_entity(item)
+    sentences = article_sentences(item)
+    used: set[str] = set()
+    claim = pick_section_sentence(sentences, ["주장", "커뮤니티", "게시글", "임신"], used)
+    broadcast = pick_section_sentence(sentences, ["방송", "장면", "출연자", "순자"], used)
+    edit = pick_section_sentence(sentences, ["편집", "삭제", "통편집"], used)
+    return [
+        (
+            "온라인에서 나온 주장",
+            [
+                section_fact(claim, f"{entity} 관련 이야기는 온라인에서 나온 주장성 내용과 함께 커졌습니다."),
+                "이런 내용은 제목으로 보면 굉장히 크게 느껴집니다. 그래도 커뮤니티발 주장과 실제 확인된 방송 내용을 같은 무게로 놓고 보면 오해가 커질 수 있어 조심해서 봐야 합니다.",
+            ],
+        ),
+        (
+            "방송 장면과 맞물린 말",
+            [
+                section_fact(broadcast, "방송에서 나온 장면도 함께 언급되며 논란이 이어졌습니다."),
+                "시청자 반응이 붙은 이유는 단순히 소문 때문만은 아닙니다. 이미 방송에서 불편하게 본 장면이 있었고, 그 위에 추가 주장이 얹히면서 말이 더 커진 흐름입니다.",
+            ],
+        ),
+        (
+            "통편집설로 번진 이유",
+            [
+                section_fact(edit, "편집 여부를 두고도 말이 이어졌습니다."),
+                "다만 통편집이나 편집 요구 같은 표현은 확인되지 않은 부분까지 섞이기 쉽습니다. 지금은 실제 방송 분량과 기사에서 확인된 설명만 분리해서 보는 쪽이 맞겠습니다.",
+            ],
+        ),
+        (
+            "확인해서 봐야 할 부분",
+            [
+                "민감한 이슈일수록 제목에 들어간 단어가 본문보다 더 크게 남습니다. 임신설, 협박설, 편집설 같은 표현은 특히 사실처럼 받아들이기 전에 출처와 확인 여부를 먼저 봐야 합니다.",
+                "정리하면 지금은 확정된 사건이라기보다 방송 장면, 온라인 주장, 시청자 반응이 한꺼번에 섞인 상태입니다. 새로운 확인 보도가 나오기 전까지는 단정하지 않는 쪽이 가장 안전합니다.",
+            ],
+        ),
+    ]
+
+
+def category_blog_blueprints(item: dict) -> list[tuple[str, list[str], str]]:
+    title = clean_text(item.get("title", ""))
+    if has_title_keywords(item, ["위경련", "탈수", "불참"]):
+        return [
+            ("연달아 비운 일정", ["불참", "축제", "일정"], "팬들이 먼저 걱정한 부분도 여기였습니다. 무대가 아쉬운 건 맞지만, 건강 문제로 여러 일정을 비웠다면 회복을 먼저 보는 게 자연스럽습니다."),
+            ("위경련과 탈수 증세", ["위경련", "탈수", "증세"], "단어만 봐도 가볍게 넘기기 어려운 상태입니다. 특히 축제 무대는 체력 소모가 큰 일정이라 무리해서 서는 것보다 쉬는 판단이 맞아 보입니다."),
+            ("소속사가 전한 휴식과 안정", ["소속사", "휴식", "안정"], "소속사 입장에서는 빠른 복귀보다 컨디션 회복을 우선으로 잡은 셈입니다. 이런 공지는 팬들에게도 상황을 이해할 수 있는 기준이 됩니다."),
+            ("다음 활동을 앞둔 상황", ["컴백", "앨범", "활동", "예정"], "앞으로의 활동이 남아 있다면 지금 무리하지 않는 게 더 중요합니다. 결국 팬들이 기다리는 건 억지로 선 무대보다 건강하게 돌아오는 모습일 겁니다."),
+        ]
+    if has_title_keywords(item, ["시험관", "난임센터"]):
+        return [
+            ("시험관 시술 중 전한 근황", ["시험관", "시술", "근황"], "이 이야기는 단순한 예능 에피소드라기보다 본인이 겪고 있는 현실을 직접 꺼냈다는 점에서 더 눈에 들어옵니다."),
+            ("난임센터에서 본 현실", ["난임센터", "병원", "사람"], "방송에서 나온 말이지만 비슷한 경험을 한 사람들에게는 꽤 현실적으로 들릴 수 있는 대목입니다. 그래서 짧은 고백에도 반응이 붙기 쉽습니다."),
+            ("반복되는 시도의 무게", ["여러 번", "지쳐", "실패", "마음"], "시험관 과정은 결과만 놓고 말하기 어려운 시간입니다. 기사에서도 그 과정의 피로와 마음이 함께 언급되면서 공감 포인트가 생겼습니다."),
+            ("방송에서 이어질 이야기", ["방송", "사연", "공개"], "프로그램 안에서는 다른 사연과 함께 다뤄지는 흐름입니다. 개인 고백이지만, 방송 주제와 맞물리면서 조금 더 넓은 이야기로 이어질 수 있습니다."),
+        ]
+    if has_title_keywords(item, ["니요", "동시 연애", "관계"]):
+        return [
+            ("세 사람과 함께 지내는 관계", ["세 명", "동시에", "한집", "교제"], "제목만 보면 자극적으로 보이지만, 기사에서 핵심은 현재 관계의 형태를 니요가 직접 설명했다는 점입니다."),
+            ("선택권을 줬다는 설명", ["선택권", "자발", "동의"], "이 대목은 단순한 스캔들식 이야기와 구분되는 부분입니다. 본인은 모두가 상황을 알고 선택했다는 설명을 강조한 것으로 보입니다."),
+            ("아이들과 생활한다는 부분", ["아이", "생활", "함께"], "관계 이야기에 가족 생활이 붙으면서 보는 사람마다 반응이 더 갈릴 수밖에 없습니다. 사생활 영역이라 판단보다 사실 확인이 먼저입니다."),
+            ("계약 무산까지 언급", ["계약", "비즈니스", "무산"], "공개 이후 실제 활동에도 영향이 있었다는 점은 기사에서 따로 볼 만한 부분입니다. 개인 선택이 대중 이미지와 연결되는 지점이기 때문입니다."),
+        ]
+    return [
+        ("처음 나온 이야기", ["공개", "밝", "전했", "올렸", "출연"], f"{lead_entity(item)} 이슈는 첫 문장만 보면 단순한 소식처럼 보입니다. 하지만 어떤 장면에서 이 말이 나왔는지까지 봐야 흐름이 자연스럽게 잡힙니다."),
+        ("기사에서 잡힌 핵심", ["핵심", "설명", "언급", "발언", "입장"], "여기서는 제목보다 본문에 실제로 들어간 내용을 보는 게 중요합니다. 자극적인 표현은 덜어내고 확인된 말만 보면 이야기가 훨씬 담백해집니다."),
+        ("반응이 붙은 이유", ["반응", "온라인", "SNS", "논란", "시청자"], "반응은 늘 기사 내용보다 빠르게 커집니다. 그래도 어떤 부분이 사람들에게 걸렸는지 보면 이 이슈가 왜 이어졌는지는 어느 정도 보입니다."),
+        ("조금 더 볼 부분", ["예정", "향후", "앞두", "다음", "계속"], "아직은 한 번에 결론내릴 만한 내용은 많지 않습니다. 지금 확인된 흐름만 정리하고, 후속 내용이 나오면 그때 다시 이어서 보는 편이 좋겠습니다."),
+    ]
+
+
+def generic_blog_sections(item: dict) -> list[tuple[str, list[str]]]:
+    sentences = article_sentences(item)
+    used: set[str] = set()
+    sections: list[tuple[str, list[str]]] = []
+    for heading, keywords, reflection in category_blog_blueprints(item):
+        sentence = pick_section_sentence(sentences, keywords, used)
+        fact = section_fact(sentence, core_summary_fallback(item))
+        sections.append((heading, [fact, reflection]))
+    return sections
+
+
+def reference_blog_sections(item: dict, related_articles: list[dict]) -> list[tuple[str, list[str]]]:
+    title = clean_text(item.get("title", ""))
+    if "한예리" in title and ("백상" in title or "워스트" in title):
+        return hanyeri_blog_sections(item)
+    if "아이오아이" in title and any(keyword in title for keyword in ["신곡", "반응", "강미나"]):
+        return ioi_blog_sections(item)
+    if item.get("safety_flags"):
+        return sensitive_blog_sections(item)
+    return generic_blog_sections(item)
+
+
+def render_issue_sections(sections: list[tuple[str, list[str]]], image_blocks: dict[str, str]) -> str:
+    chunks: list[str] = []
+    for index, (heading, paragraphs) in enumerate(sections, start=1):
+        paragraph_html = "\n".join(f"      <p>{escape(paragraph)}</p>" for paragraph in paragraphs)
+        image_html = ""
+        if index == 2 and image_blocks["core"]:
+            image_html = "\n" + image_blocks["core"]
+        if index == 4 and image_blocks["reaction"]:
+            image_html = "\n" + image_blocks["reaction"]
+        chunks.append(
+            f"""    <section id="issue-{index}">
+      <h2>{escape(heading)}</h2>
+{paragraph_html}{image_html}
+    </section>"""
+        )
+    return "\n\n".join(chunks)
 
 
 def core_summary_fallback(item: dict) -> str:
@@ -741,17 +1015,35 @@ def closing_paragraph(item: dict, related_articles: list[dict]) -> str:
             f"{entity} 관련 이야기는 제목만 보고 단정하기보다 조금 차분히 보는 편이 좋겠습니다. "
             "새로운 내용이 나오면 그때 사실관계를 중심으로 다시 확인하면 됩니다."
         )
+    if "한예리" in title and ("백상" in title or "워스트" in title):
+        return (
+            "정리하면 이번 이야기는 워스트 드레스라는 평가보다 한예리가 직접 남긴 말이 더 크게 남습니다. "
+            "호불호는 갈릴 수 있지만, 본인이 선택한 스타일을 스스로 좋았다고 말한 점이 핵심입니다."
+        )
     if "아이오아이" in title and any(keyword in title for keyword in ["신곡", "반응", "강미나"]):
         return (
             "정리하면 아이오아이 신곡 이야기는 기대감이 큰 만큼 반응도 빨리 갈린 경우입니다. "
             "지금은 챌린지와 기사에 나온 반응만 확인하고, 전체 곡은 공개 이후 다시 보면 될 것 같습니다."
         )
+    if "김지민" in title and any(keyword in title for keyword in ["시험관", "난임센터"]):
+        return (
+            "정리하면 김지민의 이번 이야기는 방송 속 짧은 고백이지만 꽤 현실적인 무게가 있었습니다. "
+            "결과보다 과정이 더 크게 느껴지는 내용이라, 담담하게 근황을 확인하는 정도가 좋아 보입니다."
+        )
+    if "니요" in title and any(keyword in title for keyword in ["동시 연애", "관계"]):
+        return (
+            "정리하면 니요의 이번 이야기는 관계 형태를 직접 공개하면서 나온 사생활 이슈입니다. "
+            "호불호를 바로 판단하기보다, 본인이 설명한 선택과 그 이후의 반응을 분리해서 보는 게 맞겠습니다."
+        )
     if related_articles:
         return (
-            f"정리하면 {entity} 이야기는 기사에 나온 내용만 보면 크게 복잡한 이슈는 아닙니다. "
-            "발언과 배경만 확인하고 넘어가도 충분해 보입니다."
+            f"정리하면 {entity} 이야기는 제목보다 본문에 나온 말과 배경을 먼저 보면 됩니다. "
+            "지금은 확인된 내용만 체크하고, 후속 내용이 나오면 그때 이어서 보면 될 것 같습니다."
         )
-    return f"정리하면 {entity} 관련 이야기는 가볍게 체크할 만한 소식입니다. 아직은 더 크게 해석할 필요는 없어 보입니다."
+    return (
+        f"정리하면 {entity} 이야기는 제목만 크게 보기보다 기사 안에 나온 말부터 차분히 보면 됩니다. "
+        "지금은 발언과 배경 정도만 체크해두면 될 것 같습니다."
+    )
 
 
 def render_related_articles(articles: list[dict]) -> str:
@@ -807,9 +1099,9 @@ def render_images(item: dict, images: list[dict]) -> dict[str, str]:
     candidates = selected_images(images)
     blocks = {"intro": "", "core": "", "reaction": ""}
     captions = [
-        f"{entity} 관련 이야기를 시작하기 전에 분위기를 잡아주는 이미지입니다.",
-        "본문에서 언급한 흐름을 한 번 쉬어가며 볼 수 있는 이미지입니다.",
-        "관련 반응과 함께 보기 좋은 참고 이미지입니다.",
+        f"기사에서 함께 제공된 {entity} 관련 이미지입니다.",
+        f"{entity} 이슈를 정리하며 함께 보기 좋은 이미지입니다.",
+        "본문에서 언급한 흐름과 같이 볼 수 있는 참고 이미지입니다.",
     ]
     for slot, image, caption in zip(blocks, candidates, captions):
         blocks[slot] = render_image(image, entity, caption)
@@ -825,12 +1117,11 @@ def render_html(item: dict, tags: list[str], related_articles: list[dict] | None
     tag_text = " ".join(f"#{tag}" for tag in tags)
     related_articles = related_articles or []
     images = images or []
-    summary = excerpt(blog_summary(item, related_articles), 150)
+    lead_text = blog_summary(item, related_articles)
+    summary = excerpt(lead_text, 150)
     image_blocks = render_images(item, images)
-    news_summary = "\n".join(f"      <p>{escape(paragraph)}</p>" for paragraph in news_summary_paragraphs(item))
-    interest = interest_paragraph(item, related_articles)
+    issue_sections = render_issue_sections(reference_blog_sections(item, related_articles), image_blocks)
     closing = closing_paragraph(item, related_articles)
-    detail_heading = section_two_heading(item)
 
     return f"""<!doctype html>
 <html lang="ko">
@@ -910,14 +1201,6 @@ def render_html(item: dict, tags: list[str], related_articles: list[dict] | None
       font-size: 13px;
       margin-top: 8px;
     }}
-    .related-list, .image-candidates {{
-      padding-left: 20px;
-    }}
-    .related-list span {{
-      color: #666;
-      font-size: 13px;
-      margin-left: 4px;
-    }}
     .tags {{
       color: #555;
       font-size: 14px;
@@ -928,27 +1211,17 @@ def render_html(item: dict, tags: list[str], related_articles: list[dict] | None
 <body>
   <article>
     <h1>{escape(title)}</h1>
-    <p class="lead">{escape(summary)}</p>
+    <p class="lead">{escape(lead_text)}</p>
 {image_blocks["intro"]}
 
-    <section id="issue-1">
-      <h2>뉴스 내용 정리</h2>
-{news_summary}
-{image_blocks["core"]}
-    </section>
+{issue_sections}
 
-    <section id="issue-2">
-      <h2>{escape(detail_heading)}</h2>
-      <p>{escape(interest)}</p>
-    </section>
-
-    <section id="issue-3">
+    <section id="issue-5">
       <h2>마무리</h2>
       <p>{escape(closing)}</p>
       <div class="source-bookmark">
         <a href="{url}" target="_blank" rel="noopener noreferrer">원문 기사: {escape(original_title)}</a>
         <span>{escape(domain)}</span>
-        <p>{escape(summary)}</p>
       </div>
     </section>
 
