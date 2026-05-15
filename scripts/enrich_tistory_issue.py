@@ -29,6 +29,43 @@ OG_IMAGE_PATTERN = re.compile(
 )
 NATE_IMAGE_PATTERN = re.compile(r"(?:https?:)?//thumbnews\.nateimg\.co\.kr/[A-Za-z0-9_./?=&;%:+-]+")
 ICON_HINTS = {"DR60l-K8vnyi99NZovm9HlXyZwQ85GMDxiwJWzoasZYCUrPuUM_P_4Rb7ei03j-0nRs0c4F"}
+TERM_STOPWORDS = {
+    "관련",
+    "보도",
+    "기사",
+    "뉴스",
+    "포토",
+    "연예",
+    "단독",
+    "영상",
+    "오늘",
+    "종합",
+    "공식",
+    "키워드",
+    "데리고",
+    "미모의",
+    "최초",
+    "공개",
+    "이래서",
+    "했나",
+    "혼난",
+    "있잖아",
+    "엄마",
+    "당황",
+    "식은땀",
+}
+NOISY_TERM_SUFFIXES = (
+    "는데",
+    "지만",
+    "면서",
+    "했다",
+    "한다",
+    "했고",
+    "하며",
+    "하다",
+    "했나",
+    "인가",
+)
 
 
 def ssl_context() -> ssl.SSLContext:
@@ -43,12 +80,66 @@ def normalized(value: str) -> str:
     return re.sub(r"[^0-9a-z가-힣]+", "", value)
 
 
+def has_final_consonant(value: str) -> bool:
+    if not value:
+        return False
+    code = ord(value[-1]) - 0xAC00
+    return 0 <= code <= 11171 and code % 28 != 0
+
+
+def normalize_term(raw: str) -> str:
+    term = re.sub(r"[\"'‘’“”\[\](){}<>.,!?…:;]+", "", clean_text(raw)).strip()
+    if len(term) < 2:
+        return term
+
+    suffix = term[-1]
+    previous = term[-2]
+    if suffix in {"은", "는", "을", "를", "와", "과", "의"}:
+        return term[:-1].strip()
+    if suffix == "이" and has_final_consonant(previous):
+        return term[:-1].strip()
+    if suffix == "가" and not has_final_consonant(previous):
+        return term[:-1].strip()
+    return term
+
+
+def meaningful_terms(item: dict) -> list[str]:
+    raw_terms = [str(term) for term in item.get("attention_terms", [])]
+    raw_terms.extend(re.findall(r"[0-9A-Za-z가-힣]{2,}", clean_text(item.get("title", ""))))
+    terms = []
+    for raw in raw_terms:
+        term = normalize_term(raw)
+        compact = re.sub(r"\s+", "", term)
+        if len(compact) < 2 or len(compact) > 18:
+            continue
+        if term in TERM_STOPWORDS or compact in TERM_STOPWORDS:
+            continue
+        if compact.endswith(NOISY_TERM_SUFFIXES):
+            continue
+        tokens = re.findall(r"[0-9A-Za-z가-힣]{2,}", term)
+        if tokens and all(token in TERM_STOPWORDS for token in tokens):
+            continue
+        if term not in terms:
+            terms.append(term)
+    return terms[:8]
+
+
 def build_query(item: dict) -> str:
-    terms = [term for term in item.get("attention_terms", []) if len(str(term)) >= 2]
+    terms = meaningful_terms(item)
     if terms:
-        return " ".join(str(term) for term in terms[:3])
+        return " ".join(str(term) for term in terms[:4])
     title_words = re.findall(r"[0-9A-Za-z가-힣]{2,}", clean_text(item.get("title", "")))
     return " ".join(title_words[:4]) or clean_text(item.get("source_query", "연예"))
+
+
+def related_score(item_terms: list[str], candidate: dict) -> int:
+    text = f"{candidate.get('title', '')} {candidate.get('description', '')}"
+    norm_text = normalized(text)
+    score = 0
+    for term in item_terms:
+        if normalized(term) and normalized(term) in norm_text:
+            score += 1
+    return score
 
 
 def unique_related(item: dict, candidates: list[dict], limit: int) -> list[dict]:
@@ -56,6 +147,7 @@ def unique_related(item: dict, candidates: list[dict], limit: int) -> list[dict]
     base_url = item.get("url", "")
     seen = {base_url}
     related = []
+    item_terms = meaningful_terms(item)
 
     for candidate in candidates:
         title = clean_text(candidate.get("title", ""))
@@ -63,6 +155,8 @@ def unique_related(item: dict, candidates: list[dict], limit: int) -> list[dict]
         if not title or not url or url in seen:
             continue
         if normalized(title) == base_title:
+            continue
+        if related_score(item_terms, candidate) < 2:
             continue
         seen.add(url)
         related.append(
