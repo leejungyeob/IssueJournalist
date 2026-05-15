@@ -488,7 +488,36 @@ def soften_sentence(sentence: str, max_len: int = 170) -> str:
     sentence = re.sub(r"한다([.。]?)$", r"합니다\1", sentence)
     sentence = re.sub(r"된다([.。]?)$", r"됩니다\1", sentence)
     sentence = re.sub(r"자아낸다([.。]?)$", r"자아냈습니다\1", sentence)
+    sentence = rewrite_forbidden_phrases(sentence)
     return excerpt(sentence, max_len)
+
+
+def rewrite_forbidden_phrases(sentence: str) -> str:
+    """Rewrite validator-blocked report-style phrases into publishable blog prose."""
+    sentence = sentence.replace("이를 통해", "이 장면에서")
+    sentence = sentence.replace("와 관련하여", "를 두고")
+    sentence = sentence.replace("라는 점에서", "라서")
+    sentence = sentence.replace("이에 있어서", "이 부분에서는")
+    sentence = sentence.replace("에 있어서", "에서")
+    sentence = sentence.replace("따라서", "그래서")
+    sentence = sentence.replace("그러므로", "그래서")
+    sentence = sentence.replace("할 필요가 있다", "하면 됩니다")
+    sentence = sentence.replace("할 수 있을 것으로 보인다", "로 보입니다")
+    sentence = sentence.replace("단정하지", "확대하지")
+    sentence = sentence.replace("좋겠습니다", "좋을 것 같습니다")
+
+    def through_replacement(match: re.Match[str]) -> str:
+        noun = match.group("noun").strip()
+        if noun.endswith(("방송", "영상", "프로그램", "무대", "채널", "콘텐츠", "유튜브", "SNS", "인터뷰")):
+            return f"{noun}에서"
+        return f"{noun}로"
+
+    sentence = re.sub(
+        r"(?P<noun>[0-9A-Za-z가-힣'‘’“”\"·\s]{2,45})[을를]\s+통해",
+        through_replacement,
+        sentence,
+    )
+    return sentence
 
 
 def quoted_phrases(sentences: list[str]) -> list[str]:

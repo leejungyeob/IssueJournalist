@@ -1,12 +1,12 @@
 # IssueJournalist
 
-연예 뉴스 수집부터 티스토리 게시용 HTML 초안 생성까지 돕는 반자동 블로그 운영 워크스페이스입니다.
+연예 뉴스 수집부터 티스토리 글 생성, Chrome 기반 티스토리 발행까지 자동화하는 블로그 운영 워크스페이스입니다.
 
-현재 운영 방향은 티스토리입니다. 뉴스 수집은 공개 RSS 기반이며, 티스토리는 HTML/대표이미지 생성 후 수동 복붙을 기본값으로 둡니다.
+현재 운영 방향은 티스토리입니다. 뉴스 수집은 네이트 연예 랭킹과 공개 RSS를 함께 사용하고, 티스토리는 로그인된 Chrome을 AppleScript로 제어해 발행합니다.
 
 ## 설정
 
-현재 초안 생성에는 별도 API 키가 필요하지 않습니다. `.env`는 Git에서 제외되어 있으며, 이후 티스토리 브라우저 자동화에 필요한 로컬 값이 생기면 개인 환경에서만 관리합니다.
+뉴스 수집에는 별도 API 키가 필요하지 않습니다. 티스토리 발행은 Chrome 로그인 세션을 사용하므로, 발행용 맥에서 티스토리에 로그인되어 있어야 합니다.
 
 ## 티스토리 파이프라인 실행
 
@@ -26,6 +26,12 @@ python3 scripts/run_tistory_pipeline.py
 
 ```bash
 python3 scripts/run_tistory_hourly_batch.py
+```
+
+현재 기본 설정은 `browser_publish`입니다. 위 명령은 시간대가 맞으면 5개 글을 만들고 티스토리에 발행까지 시도합니다. 발행 없이 산출물만 검증하려면 아래처럼 실행합니다.
+
+```bash
+python3 scripts/run_tistory_hourly_batch.py --force --no-record --no-publish
 ```
 
 시간당 배치는 먼저 네이트 연예 조회순 랭킹을 사용합니다. 이미 `logs/tistory-published.jsonl` 또는 `logs/tistory-issued.jsonl`에 같은 URL/제목이 있으면 건너뛰고, 랭킹 후보가 부족해지면 공개 RSS 최신 연예뉴스 후보로 채웁니다.
@@ -69,7 +75,7 @@ drafts/YYYY-MM-DD/HH/
 docs/company-handoff-tistory-automation.md
 ```
 
-## 티스토리 브라우저 자동 입력
+## 티스토리 브라우저 자동 발행
 
 티스토리 Open API는 종료되어 공식 API 발행은 사용하지 않습니다. 로그인된 Chrome으로 글쓰기 화면을 열고 자동 입력합니다.
 본문은 일반 편집 영역에 붙여넣지 않고 `더보기 > HTML블럭`에 넣습니다. 글쓰기 화면에서는 `미리보기할 수 없는 소스` 박스로 보일 수 있습니다.
@@ -101,6 +107,34 @@ python3 scripts/publish_tistory_browser.py \
 python3 scripts/publish_tistory_browser.py \
   --manifest drafts/YYYY-MM-DD/HH/manifest.json \
   --draft-save
+```
+
+5개 배치 실제 발행:
+
+```bash
+python3 scripts/publish_tistory_browser.py \
+  --manifest drafts/YYYY-MM-DD/HH/manifest.json \
+  --publish
+```
+
+발행 성공 이력은 `logs/tistory-published.jsonl`에 기록됩니다.
+
+## 매시간 자동 실행
+
+Codex 자동화 `daily-tistory-entertainment-draft`는 매시간 정각 실행되도록 설정합니다. 실제 발행은 `config/tistory-automation.json`의 `active_hours` 기준으로 `00:00`, `01:00`, `02:00`, `07:00`부터 `23:00`까지만 진행하고, 나머지 시간은 스크립트가 자동으로 건너뜁니다.
+
+Codex 자동화 대신 로컬 맥에서 직접 돌리고 싶을 때는 macOS `launchd`를 사용할 수 있습니다.
+
+```bash
+scripts/install_tistory_hourly_launchd.sh
+```
+
+실행 로그:
+
+```bash
+logs/tistory-hourly-run.log
+logs/launchd-tistory-hourly.out.log
+logs/launchd-tistory-hourly.err.log
 ```
 
 ## 뉴스 수집

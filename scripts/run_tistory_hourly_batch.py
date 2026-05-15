@@ -119,22 +119,28 @@ def maybe_browser_publish(config: dict, manifest_path: Path) -> None:
     publish_mode = config.get("publish_mode", "manual_copy")
     if not browser_config.get("enabled") and publish_mode == "manual_copy":
         return
-    if publish_mode == "browser_publish":
-        raise SystemExit("browser_publish is not enabled yet. Use browser_draft first.")
+    if publish_mode not in {"browser_draft", "browser_publish"}:
+        raise SystemExit(f"unsupported browser publish mode: {publish_mode}")
     blog_host = browser_config.get("blog_host")
     args = [
         sys.executable,
         "scripts/publish_tistory_browser.py",
         "--manifest",
         str(manifest_path),
-        "--draft-save",
     ]
+    if publish_mode == "browser_publish":
+        args.append("--publish")
+    else:
+        args.append("--draft-save")
     if blog_host:
         args.extend(["--blog-host", str(blog_host)])
+    pause_seconds = browser_config.get("pause_seconds")
+    if pause_seconds is not None:
+        args.extend(["--pause-seconds", str(pause_seconds)])
     run_command(args)
 
 
-def run_batch(config: dict, output_dir: Path, record_history: bool) -> int:
+def run_batch(config: dict, output_dir: Path, record_history: bool, publish_enabled: bool) -> int:
     output_dir.mkdir(parents=True, exist_ok=True)
 
     posts_per_run = int(config.get("posts_per_run", 5))
@@ -228,6 +234,7 @@ def run_batch(config: dict, output_dir: Path, record_history: bool) -> int:
             ]
         )
 
+        require_png_cover = config.get("publish_mode") == "browser_publish"
         cover_args = [
             sys.executable,
             "scripts/create_cover_image.py",
@@ -239,7 +246,11 @@ def run_batch(config: dict, output_dir: Path, record_history: bool) -> int:
         ]
         if shutil.which("rsvg-convert"):
             cover_args.extend(["--png-output", str(cover_png)])
+        elif require_png_cover:
+            raise SystemExit("rsvg-convert is required to create cover.png before browser publishing.")
         run_command(cover_args)
+        if require_png_cover and not cover_png.exists():
+            raise SystemExit(f"cover.png was not created: {cover_png}")
 
         run_command(
             [
@@ -256,6 +267,11 @@ def run_batch(config: dict, output_dir: Path, record_history: bool) -> int:
         manifest["posts"].append(
             {
                 "post_dir": str(post_dir),
+                "source_title": selected_items[index].get("title", ""),
+                "source_url": selected_items[index].get("url", ""),
+                "source_domain": selected_items[index].get("domain", ""),
+                "rank_source": selected_items[index].get("rank_source", ""),
+                "rank_position": selected_items[index].get("rank_position"),
                 "enriched": str(enriched_path),
                 "title": str(title_path),
                 "title_candidates": str(title_candidates_path),
@@ -268,7 +284,8 @@ def run_batch(config: dict, output_dir: Path, record_history: bool) -> int:
 
     manifest_path = output_dir / "manifest.json"
     manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    maybe_browser_publish(config, manifest_path)
+    if publish_enabled:
+        maybe_browser_publish(config, manifest_path)
     if record_history:
         append_issued_log(selected_items, manifest_path)
     print(f"OK: hourly Tistory batch created: {manifest_path}")
@@ -281,6 +298,7 @@ def main() -> int:
     parser.add_argument("--force", action="store_true", help="Run even outside configured active hours.")
     parser.add_argument("--output-dir", type=Path, help="Override output directory.")
     parser.add_argument("--no-record", action="store_true", help="Do not append selected items to local issued history.")
+    parser.add_argument("--no-publish", action="store_true", help="Create and validate artifacts but skip browser publishing.")
     args = parser.parse_args()
 
     config = load_config(args.config)
@@ -291,7 +309,7 @@ def main() -> int:
 
     output_dir = args.output_dir or output_dir_for(current)
     try:
-        return run_batch(config, output_dir, not args.no_record)
+        return run_batch(config, output_dir, not args.no_record, not args.no_publish)
     except subprocess.CalledProcessError as exc:
         print(f"ERROR: command failed with exit code {exc.returncode}: {' '.join(exc.cmd)}", file=sys.stderr)
         return exc.returncode

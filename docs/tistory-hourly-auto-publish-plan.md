@@ -13,7 +13,7 @@
 현재 구현은 아래 단계까지 가능하다.
 
 ```text
-뉴스 수집 -> 시간당 이슈 5개 선택 -> 개별글 5개 생성 -> 대표이미지 5개 생성 -> 검증
+뉴스 수집 -> 시간당 이슈 5개 선택 -> 개별글 5개 생성 -> 대표이미지 5개 생성 -> 검증 -> Chrome 브라우저 자동 발행
 ```
 
 현재 실행 명령:
@@ -22,7 +22,7 @@
 python3 scripts/run_tistory_hourly_batch.py
 ```
 
-현재 산출물은 `drafts/YYYY-MM-DD/HH/post-01..05/`에 나뉘어 저장되고, 티스토리에 사람이 복사/붙여넣기하는 구조다.
+현재 산출물은 `drafts/YYYY-MM-DD/HH/post-01..05/`에 나뉘어 저장되고, 기본 설정에서는 로그인된 Chrome을 통해 티스토리에 바로 발행한다.
 
 선택 우선순위:
 
@@ -32,7 +32,7 @@ python3 scripts/run_tistory_hourly_batch.py
 -> 랭킹 후보 부족 시 공개 RSS 최신 연예뉴스로 보충
 ```
 
-## 필요한 구조
+## 자동 발행 구조
 
 최종 자동 발행은 아래 구조로 바꾼다.
 
@@ -45,7 +45,7 @@ python3 scripts/run_tistory_hourly_batch.py
 -> 이슈별 티스토리 글 5개 렌더링
 -> 대표이미지 5개 생성
 -> 검증
--> 티스토리 브라우저 자동화로 임시저장 또는 발행
+-> 티스토리 브라우저 자동화로 발행
 -> 발행 로그 저장
 ```
 
@@ -76,19 +76,33 @@ KST 기준으로 아래 시간에 실행한다.
 02:00
 ```
 
-## 구현 순서
+## 운영 명령
 
-1. `run_tistory_pipeline.py`를 유지한다.
-2. 브라우저 자동화가 발행 성공 시 `logs/tistory-published.jsonl`에 발행 이력을 남긴다.
-3. 브라우저 자동화로 티스토리 글쓰기 화면에 제목, `더보기 > HTML블럭` 본문, 태그, 대표이미지를 넣는다.
-4. 처음에는 `임시저장`까지만 자동화한다.
-5. 임시저장 1-2일 검증 후 자동 발행으로 바꾼다.
+발행 없이 산출물만 검증한다.
+
+```bash
+python3 scripts/run_tistory_hourly_batch.py --force --no-record --no-publish
+```
+
+현재 시간대가 `active_hours`에 포함되면 5개 글을 생성하고 발행한다.
+
+```bash
+python3 scripts/run_tistory_hourly_batch.py
+```
+
+Codex 자동화 `daily-tistory-entertainment-draft`가 매시간 정각 실행되도록 설정되어 있다. 실제 발행 시간대는 `config/tistory-automation.json`의 `active_hours`가 제어하므로 3~6시는 스크립트가 자동으로 건너뛴다. Codex 자동화 대신 로컬 맥에서 직접 돌리고 싶으면 macOS `launchd`에 등록한다.
+
+```bash
+scripts/install_tistory_hourly_launchd.sh
+```
+
+성공한 발행 이력은 `logs/tistory-published.jsonl`에 저장한다. 선택 이력은 `logs/tistory-issued.jsonl`에도 남겨 같은 URL/제목을 다시 고르지 않게 한다.
 
 ## 운영 리스크
 
 하루 100개 발행은 플랫폼 스팸 판정 위험이 크다.
 
-기술적으로는 구현할 수 있지만, 처음에는 아래 순서가 안전하다.
+기술적으로는 구현되어 있지만, 운영 리스크는 여전히 있다. 문제가 생기면 아래 순서로 낮춘다.
 
 ```text
 시간당 5개 초안 생성

@@ -20,6 +20,8 @@ REQUIRED_SCRIPTS = [
     "scripts/render_tistory_seed_draft.py",
     "scripts/create_cover_image.py",
     "scripts/check_tistory_ready_html.py",
+    "scripts/run_tistory_hourly_batch.py",
+    "scripts/publish_tistory_browser.py",
 ]
 
 def load_config(path: Path) -> dict:
@@ -42,6 +44,14 @@ def preflight(config: dict) -> int:
         errors.append(f"target must be tistory, got {config.get('target')!r}")
     if config.get("publish_mode") not in {"manual_copy", "browser_draft", "browser_publish"}:
         errors.append(f"unsupported publish_mode: {config.get('publish_mode')!r}")
+    if config.get("publish_mode") == "browser_publish":
+        browser_publish = config.get("browser_publish") or {}
+        if not browser_publish.get("enabled"):
+            errors.append("browser_publish.enabled must be true when publish_mode is browser_publish")
+        if not browser_publish.get("blog_host"):
+            errors.append("browser_publish.blog_host is required for browser_publish mode")
+        if not shutil.which("osascript"):
+            errors.append("osascript is required for Chrome browser publishing")
 
     scripts_missing = missing_scripts()
     if scripts_missing:

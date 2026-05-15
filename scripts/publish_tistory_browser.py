@@ -18,6 +18,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_CONFIG = ROOT / "config" / "tistory-automation.json"
 KST = ZoneInfo("Asia/Seoul")
 DRAFT_LOG = ROOT / "logs" / "tistory-browser-drafts.jsonl"
+PUBLISHED_LOG = ROOT / "logs" / "tistory-published.jsonl"
 
 
 def read_text(path: Path) -> str:
@@ -741,6 +742,125 @@ def click_draft_save() -> dict:
     return wait_for_draft_saved()
 
 
+def ensure_public_publish_option() -> dict:
+    js = r"""
+(() => {
+  const visible = el => {
+    const rect = el.getBoundingClientRect();
+    const style = getComputedStyle(el);
+    return rect.width > 0 && rect.height > 0 && style.display !== "none" && style.visibility !== "hidden";
+  };
+  const exactText = el => ((el.innerText || el.textContent || "").trim()).replace(/\s+/g, " ");
+  const publicLabel = [...document.querySelectorAll("label, button, [role='button']")]
+    .find(el => visible(el) && exactText(el) === "공개");
+  if (publicLabel) {
+    publicLabel.click();
+    return JSON.stringify({ok: true, selected: "공개", clicked: true});
+  }
+  const publicInput = [...document.querySelectorAll("input[type='radio']")]
+    .find(input => {
+      const id = input.id ? document.querySelector(`label[for="${CSS.escape(input.id)}"]`) : null;
+      const labelText = id ? exactText(id) : "";
+      return labelText === "공개" || input.value === "public" || input.value === "20";
+    });
+  if (publicInput) {
+    publicInput.checked = true;
+    publicInput.dispatchEvent(new Event("input", {bubbles: true}));
+    publicInput.dispatchEvent(new Event("change", {bubbles: true}));
+    return JSON.stringify({ok: true, selected: "공개", clicked: false});
+  }
+  return JSON.stringify({ok: true, selected: "", clicked: false, reason: "public option not found"});
+})()
+"""
+    return json.loads(execute_chrome_js(js))
+
+
+def click_final_publish_button() -> dict:
+    js = r"""
+(() => {
+  const visible = el => {
+    const rect = el.getBoundingClientRect();
+    const style = getComputedStyle(el);
+    return rect.width > 0 && rect.height > 0 && style.display !== "none" && style.visibility !== "hidden";
+  };
+  const buttonText = el => ((el.innerText || el.textContent || "").trim()).replace(/\s+/g, " ");
+  const button = document.querySelector("#publish-btn") ||
+    [...document.querySelectorAll("button, [role='button']")]
+      .find(el => visible(el) && ["발행", "공개 발행", "예약 발행"].includes(buttonText(el)));
+  if (!button) throw new Error("final publish button not found");
+  if (button.disabled || button.getAttribute("aria-disabled") === "true") {
+    throw new Error("final publish button is disabled");
+  }
+  const beforeUrl = location.href;
+  button.click();
+  return JSON.stringify({ok: true, clicked: buttonText(button) || "publish", beforeUrl});
+})()
+"""
+    try:
+        result = execute_chrome_js(js)
+        if result and result != "missing value":
+            return json.loads(result)
+    except (RuntimeError, json.JSONDecodeError):
+        for label in ("발행", "공개 발행"):
+            if click_chrome_accessibility_button(label):
+                return {"ok": True, "clicked": label, "beforeUrl": ""}
+        raise
+    return {"ok": True, "clicked": "publish", "beforeUrl": ""}
+
+
+def wait_for_publish_complete(before_url: str = "", timeout: int = 60) -> dict:
+    deadline = time.time() + timeout
+    last: dict = {}
+    while time.time() < deadline:
+        dismiss_chrome_confirm_dialog("확인")
+        try:
+            last = json.loads(execute_chrome_js(r"""
+(() => {
+  const text = document.body ? document.body.innerText : "";
+  const url = location.href;
+  const canonical = document.querySelector("link[rel='canonical']")?.href || "";
+  const hasEditor = !!document.querySelector("#post-title-inp, .textarea_tit, #publish-layer-btn");
+  const publishDoneText = /발행되었습니다|게시되었습니다|글이 등록되었습니다|등록되었습니다/.test(text);
+  const movedToPublicPost = !/\/manage\/newpost|\/manage\/post/.test(url) && !/\/manage($|\/)/.test(url);
+  return JSON.stringify({
+    ok: publishDoneText || movedToPublicPost,
+    url,
+    canonical,
+    title: document.title,
+    hasEditor,
+    publishDoneText,
+    movedToPublicPost,
+    bodyTail: text.slice(-300)
+  });
+})()
+"""))
+        except RuntimeError:
+            if dismiss_chrome_confirm_dialog("확인"):
+                time.sleep(0.8)
+                continue
+            raise
+        current_url = last.get("url") or ""
+        if last.get("ok") and (not before_url or current_url != before_url or last.get("publishDoneText")):
+            last["ok"] = True
+            return last
+        time.sleep(1)
+    raise SystemExit(f"Publish did not finish: {last}")
+
+
+def click_publish() -> dict:
+    open_publish_layer()
+    visibility = ensure_public_publish_option()
+    click_state = click_final_publish_button()
+    complete = wait_for_publish_complete(click_state.get("beforeUrl", ""))
+    return {
+        "published": True,
+        "publishClicked": click_state.get("clicked", ""),
+        "publishVisibility": visibility.get("selected", ""),
+        "publishedUrl": complete.get("canonical") or complete.get("url", ""),
+        "publishState": complete,
+    }
+
+
 def append_log(path: Path, entry: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("a", encoding="utf-8") as file:
@@ -753,6 +873,7 @@ def publish_posts(
     limit: int | None,
     draft_save: bool,
     prepare_publish: bool,
+    publish: bool,
     pause_seconds: float,
 ) -> None:
     assert_chrome_javascript_enabled()
@@ -766,9 +887,31 @@ def publish_posts(
         wait_for_editor()
         result = fill_editor(title, html, tags)
         status = "filled"
-        if prepare_publish:
+        if prepare_publish or publish:
             result.update(set_cover_image(Path(post["cover"])))
+            if publish and not result.get("coverApplied"):
+                raise SystemExit(f"Cover image was not applied before publish: {post.get('cover')}")
             status = "publish_ready"
+        if publish:
+            result.update(click_publish())
+            status = "published"
+            append_log(
+                PUBLISHED_LOG,
+                {
+                    "created_at": datetime.now(KST).isoformat(timespec="seconds"),
+                    "status": status,
+                    "title": title,
+                    "url": post.get("source_url", ""),
+                    "source_title": post.get("source_title", ""),
+                    "source_url": post.get("source_url", ""),
+                    "source_domain": post.get("source_domain", ""),
+                    "rank_source": post.get("rank_source", ""),
+                    "rank_position": post.get("rank_position"),
+                    "post_dir": str(post_dir),
+                    "published_url": result.get("publishedUrl", ""),
+                    "cover_applied": result.get("coverApplied", False),
+                },
+            )
         if draft_save:
             click_draft_save()
             status = "draft_saved"
@@ -778,6 +921,8 @@ def publish_posts(
                     "created_at": datetime.now(KST).isoformat(timespec="seconds"),
                     "status": status,
                     "title": title,
+                    "source_title": post.get("source_title", ""),
+                    "source_url": post.get("source_url", ""),
                     "post_dir": str(post_dir),
                     "url": result.get("url"),
                     "cover_applied": result.get("coverApplied", False),
@@ -797,8 +942,12 @@ def main() -> int:
     parser.add_argument("--limit", type=int, help="Limit number of posts to process")
     parser.add_argument("--draft-save", action="store_true", help="Click Tistory draft save after filling each post")
     parser.add_argument("--prepare-publish", action="store_true", help="Open publish settings and apply cover image, but do not click final publish")
+    parser.add_argument("--publish", action="store_true", help="Click final Tistory publish after filling each post")
     parser.add_argument("--pause-seconds", type=float, default=2.0)
     args = parser.parse_args()
+
+    if args.publish and args.draft_save:
+        raise SystemExit("--publish and --draft-save cannot be used together.")
 
     env = load_env()
     blog_host = args.blog_host or env.get("TISTORY_BLOG_HOST") or config_blog_host(args.config)
@@ -806,7 +955,7 @@ def main() -> int:
         raise SystemExit("Missing blog host. Pass --blog-host or set TISTORY_BLOG_HOST in .env.")
 
     posts = load_posts(args.manifest, args.post_dir)
-    publish_posts(blog_host, posts, args.limit, args.draft_save, args.prepare_publish, args.pause_seconds)
+    publish_posts(blog_host, posts, args.limit, args.draft_save, args.prepare_publish, args.publish, args.pause_seconds)
     return 0
 
 
