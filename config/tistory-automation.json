@@ -4,7 +4,10 @@
   "publish_mode": "manual_copy",
   "posts_per_run": 5,
   "news_display_per_query": 40,
-  "news_limit": 30,
+  "news_limit": 80,
+  "nate_rank_limit": 30,
+  "related_articles_per_post": 5,
+  "image_candidates_per_post": 4,
   "active_hours": [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 0, 1, 2],
   "tags": [
     "연예뉴스",

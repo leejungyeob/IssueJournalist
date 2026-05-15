@@ -64,7 +64,50 @@ def meta_description(item: dict) -> str:
     return text
 
 
-def render_html(item: dict, tags: list[str]) -> str:
+def render_image_block(images: list[dict]) -> str:
+    if not images:
+        return ""
+
+    primary = images[0]
+    return f"""
+      <figure class="news-image">
+        <img src="{escape(primary.get("url", ""))}" alt="{escape(primary.get("source_article_title", "뉴스 이미지"))}" loading="lazy">
+        <figcaption>이미지 출처: <a href="{escape(primary.get("source_article_url", ""))}" target="_blank" rel="noopener noreferrer">{escape(primary.get("source_name", "원문"))}</a></figcaption>
+      </figure>
+""".rstrip()
+
+
+def render_image_candidates(images: list[dict]) -> str:
+    if len(images) <= 1:
+        return ""
+
+    items = "\n".join(
+        f"""        <li><a href="{escape(image.get("source_article_url", ""))}" target="_blank" rel="noopener noreferrer">{escape(image.get("source_name", "원문"))}</a> 이미지 후보</li>"""
+        for image in images[1:4]
+    )
+    return f"""
+      <ul class="image-candidates">
+{items}
+      </ul>
+""".rstrip()
+
+
+def render_related_articles(articles: list[dict]) -> str:
+    if not articles:
+        return "<p>현재 같은 키워드의 보조 기사는 추가로 확인되지 않았습니다.</p>"
+
+    items = "\n".join(
+        f"""        <li><a href="{escape(article.get("url", ""))}" target="_blank" rel="noopener noreferrer">{escape(article.get("title", ""))}</a> <span>{escape(article.get("source_name") or article.get("domain") or "원문")}</span></li>"""
+        for article in articles[:5]
+    )
+    return f"""
+      <ul class="related-list">
+{items}
+      </ul>
+""".rstrip()
+
+
+def render_html(item: dict, tags: list[str], related_articles: list[dict] | None = None, images: list[dict] | None = None) -> str:
     title = clamp_title(item.get("title", ""))
     description = clean_text(item.get("description", ""))
     source_name = clean_text(item.get("source_name") or item.get("domain") or "원문")
@@ -75,6 +118,11 @@ def render_html(item: dict, tags: list[str]) -> str:
     term_text = ", ".join(term for term in terms if term)
     summary = meta_description(item)
     tag_text = " ".join(f"#{tag}" for tag in tags)
+    related_articles = related_articles or []
+    images = images or []
+    primary_image = render_image_block(images)
+    image_candidates = render_image_candidates(images)
+    related_block = render_related_articles(related_articles)
 
     return f"""<!doctype html>
 <html lang="ko">
@@ -137,6 +185,28 @@ def render_html(item: dict, tags: list[str]) -> str:
       display: block;
       font-size: 13px;
     }}
+    .news-image {{
+      margin: 22px 0;
+    }}
+    .news-image img {{
+      border-radius: 8px;
+      display: block;
+      height: auto;
+      max-width: 100%;
+    }}
+    .news-image figcaption {{
+      color: #666;
+      font-size: 13px;
+      margin-top: 8px;
+    }}
+    .related-list, .image-candidates {{
+      padding-left: 20px;
+    }}
+    .related-list span {{
+      color: #666;
+      font-size: 13px;
+      margin-left: 4px;
+    }}
     .tags {{
       color: #555;
       font-size: 14px;
@@ -161,22 +231,15 @@ def render_html(item: dict, tags: list[str]) -> str:
     <section id="issue-1">
       <h2>무슨 소식인가</h2>
       <p>{escape(description or title)}</p>
+{primary_image}
       <p class="meta">보도 시각: {pub_date} | 출처: <a href="{url}" target="_blank" rel="noopener noreferrer">{escape(source_name)}</a></p>
-      <div class="source-bookmark">
-        <a href="{url}" target="_blank" rel="noopener noreferrer">원문 기사: {escape(title)}</a>
-        <span>{escape(domain)}</span>
-        <p>{escape(summary)}</p>
-      </div>
     </section>
 
     <section id="issue-2">
-      <h2>주목할 키워드</h2>
+      <h2>같은 키워드로 함께 나온 기사</h2>
       <p>{escape(term_text or title)} 관련 소식으로 확인됩니다. 제목과 본문에서 반복되는 핵심 키워드를 중심으로 흐름을 정리했습니다.</p>
-      <div class="source-bookmark">
-        <a href="{url}" target="_blank" rel="noopener noreferrer">키워드 확인 기사: {escape(title)}</a>
-        <span>{escape(domain)}</span>
-        <p>{escape(term_text or source_name)}</p>
-      </div>
+{related_block}
+{image_candidates}
     </section>
 
     <section id="issue-3">
@@ -204,6 +267,7 @@ def main() -> int:
     parser.add_argument("--title-output", type=Path, required=True, help="Post title output path.")
     parser.add_argument("--tags-output", type=Path, required=True, help="Comma-separated tags output path.")
     parser.add_argument("--base-tags", default="", help="Comma-separated fallback tags.")
+    parser.add_argument("--enriched", type=Path, help="Optional enriched issue JSON path.")
     args = parser.parse_args()
 
     payload = json.loads(args.input.read_text(encoding="utf-8"))
@@ -212,12 +276,19 @@ def main() -> int:
         raise SystemExit(f"item index out of range: {args.index}")
 
     item = items[args.index]
+    related_articles: list[dict] = []
+    image_candidates: list[dict] = []
+    if args.enriched:
+        enriched = json.loads(args.enriched.read_text(encoding="utf-8"))
+        item = enriched.get("item") or item
+        related_articles = enriched.get("related_articles") or []
+        image_candidates = enriched.get("image_candidates") or []
     base_tags = [tag.strip() for tag in args.base_tags.split(",") if tag.strip()] or DEFAULT_TAGS
     tags = keyword_tags(item, base_tags)
     title = clamp_title(item.get("title", ""))
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(render_html(item, tags), encoding="utf-8")
+    args.output.write_text(render_html(item, tags, related_articles, image_candidates), encoding="utf-8")
     args.title_output.write_text(title + "\n", encoding="utf-8")
     args.tags_output.write_text(",".join(tags) + "\n", encoding="utf-8")
     print(args.output)

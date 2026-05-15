@@ -28,6 +28,8 @@ python3 scripts/run_tistory_pipeline.py
 python3 scripts/run_tistory_hourly_batch.py
 ```
 
+시간당 배치는 먼저 네이트 연예 조회순 랭킹을 사용합니다. 이미 `logs/tistory-published.jsonl` 또는 `logs/tistory-issued.jsonl`에 같은 URL/제목이 있으면 건너뛰고, 랭킹 후보가 부족해지면 공개 RSS 최신 연예뉴스 후보로 채웁니다.
+
 생성물은 `drafts/YYYY-MM-DD/` 아래에 저장됩니다.
 
 ```text
@@ -47,6 +49,7 @@ drafts/YYYY-MM-DD/HH/
   latest-entertainment-news.json
   manifest.json
   post-01/
+    enriched.json
     post-title.txt
     post-tags.txt
     cover.png

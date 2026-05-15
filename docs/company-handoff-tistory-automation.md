@@ -27,6 +27,13 @@
 
 현재 코드는 `시간당 5개 개별글 생성`까지 된다. 티스토리 브라우저 자동 입력/임시저장/발행은 아직 구현 전이다.
 
+현재 시간당 글 선택 방식:
+
+1. 네이트 연예 조회순 랭킹에서 높은 순위 기사부터 사용한다.
+2. `logs/tistory-published.jsonl` 또는 `logs/tistory-issued.jsonl`에 같은 URL/제목이 있으면 건너뛴다.
+3. 네이트 랭킹 후보를 다 썼거나 부족하면 공개 RSS 최신 연예뉴스 후보로 채운다.
+4. 개별글마다 같은 키워드의 보조 기사와 이미지 후보를 `enriched.json`에 저장한다.
+
 최종 목표를 위해 필요한 추가 구현:
 
 1. 중복 발행 방지용 발행 로그
@@ -111,6 +118,7 @@ drafts/YYYY-MM-DD/HH/
   latest-entertainment-news.json
   manifest.json
   post-01/
+    enriched.json
     post-title.txt
     post-tags.txt
     cover.png

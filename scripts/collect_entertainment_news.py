@@ -26,6 +26,7 @@ CERT_PATHS = [
 
 DEFAULT_QUERIES = ["연예", "아이돌", "배우", "드라마", "예능", "K팝", "컴백", "시청률"]
 RSS_ENDPOINT = "https://news.google.com/rss/search"
+NATE_RANK_URL = "https://news.nate.com/rank/pop?sc=ent"
 IMPORTANT_KEYWORDS = [
     "공식",
     "단독",
@@ -97,6 +98,9 @@ class NewsItem:
     source_query: str
     source_queries: list[str]
     source_name: str
+    rank_source: str
+    rank_position: int | None
+    image_candidates: list[dict]
     score: float
     interest_score: float
     cluster_size: int
@@ -146,6 +150,13 @@ def domain_from_url(value: str) -> str:
     return parsed.netloc.removeprefix("www.")
 
 
+def absolute_url(value: str, base: str = "https://news.nate.com") -> str:
+    value = html.unescape(value or "").strip()
+    if value.startswith("//"):
+        return "https:" + value
+    return urllib.parse.urljoin(base, value)
+
+
 def keyword_hits(text: str, keywords: list[str]) -> list[str]:
     return [keyword for keyword in keywords if keyword in text]
 
@@ -180,6 +191,7 @@ def score_item(
     cluster_size: int,
     cluster_domains: list[str],
     source_queries: list[str],
+    rank_position: int | None = None,
 ) -> tuple[float, float]:
     now = datetime.now(KST)
     age_hours = max((now - pub_dt).total_seconds() / 3600, 0)
@@ -189,8 +201,9 @@ def score_item(
     query_score = min(len(source_queries), 5)
     interest_score = coverage_score + domain_score + query_score
     important_score = min(len(important_hits), 4) * 2
+    rank_score = max(0, 31 - rank_position) * 1.4 if rank_position else 0
     safety_penalty = min(len(safety_flags), 4) * (0.8 if cluster_size >= 2 else 1.5)
-    score = interest_score + recency_score + important_score - safety_penalty
+    score = interest_score + recency_score + important_score + rank_score - safety_penalty
     return round(score, 3), round(interest_score, 3)
 
 
@@ -238,9 +251,146 @@ def fetch_rss(query: str) -> list[dict]:
     return items
 
 
-def collect_news(queries: list[str], display: int, limit: int) -> dict:
+def fetch_text(url: str, encoding: str | None = None) -> str:
+    request = urllib.request.Request(
+        url,
+        headers={"User-Agent": "IssueJournalist/1.0 (+https://github.com/leejungyeob/IssueJournalist)"},
+    )
+    with urllib.request.urlopen(request, timeout=15, context=ssl_context()) as response:
+        charset = encoding or response.headers.get_content_charset() or "utf-8"
+        return response.read().decode(charset, errors="replace")
+
+
+def strip_markup(value: str) -> str:
+    return clean_text(re.sub(r"<[^>]+>", " ", value or ""))
+
+
+def parse_nate_date(value: str) -> str:
+    raw = clean_text(value)
+    if re.fullmatch(r"\d{4}-\d{2}-\d{2}", raw):
+        return email.utils.format_datetime(datetime.strptime(raw, "%Y-%m-%d").replace(tzinfo=KST))
+    return email.utils.format_datetime(datetime.now(KST))
+
+
+def fetch_nate_rank(limit: int) -> list[dict]:
+    page = fetch_text(NATE_RANK_URL, encoding="euc-kr")
+    items: list[dict] = []
+
+    seen_urls = set()
+    top_blocks = re.findall(r'<div class="mduSubjectList f_clear">.*?</div><!-- //mduSubjectList -->', page, re.DOTALL)
+    for block in top_blocks:
+        rank_match = re.search(r'<dl class="mduRank rank(?P<rank>\d+)">', block)
+        link_match = re.search(r'<a href="(?P<href>[^"]+)"[^>]*class="lt1"', block)
+        image_match = re.search(r'<img src="(?P<img>[^"]+)"', block)
+        title_match = re.search(r'<h2 class="tit">(?P<title>.*?)</h2>', block, re.DOTALL)
+        source_match = re.search(r'<span class="medium">(?P<source>.*?)<em>(?P<date>.*?)</em>', block, re.DOTALL)
+        if not rank_match or not link_match or not title_match or not source_match:
+            continue
+
+        description = ""
+        desc_match = re.search(r'</h2>(?P<desc>.*?)</span>\s*</a>', block, re.DOTALL)
+        if desc_match:
+            description = strip_markup(desc_match.group("desc"))
+
+        image_url = absolute_url(image_match.group("img")) if image_match else ""
+        url = absolute_url(link_match.group("href"))
+        if url in seen_urls:
+            continue
+        seen_urls.add(url)
+        items.append(
+            {
+                "title": strip_markup(title_match.group("title")),
+                "description": description,
+                "url": url,
+                "domain": "news.nate.com",
+                "source_name": strip_markup(source_match.group("source")),
+                "pub_date": parse_nate_date(source_match.group("date")),
+                "rank_source": "nate_ent_pop",
+                "rank_position": int(rank_match.group("rank")),
+                "image_candidates": [
+                    {
+                        "url": image_url,
+                        "source_article_title": strip_markup(title_match.group("title")),
+                        "source_article_url": url,
+                        "source_name": strip_markup(source_match.group("source")),
+                    }
+                ]
+                if image_url
+                else [],
+            }
+        )
+        if len(items) >= limit:
+            return items
+
+    list_blocks = re.findall(r'<li>\s*.*?</li>', page, re.DOTALL)
+    for block in list_blocks:
+        rank_match = re.search(r'<dl class="mduRank rank(?P<rank>\d+)">', block)
+        link_match = re.search(r'<h2><a href="(?P<href>[^"]+)">(?P<title>.*?)</a></h2>', block, re.DOTALL)
+        source_match = re.search(r'<span class="medium">(?P<source>.*?)</span>', block, re.DOTALL)
+        if not rank_match or not link_match or not source_match:
+            continue
+        rank = int(rank_match.group("rank"))
+        if rank <= 5:
+            continue
+
+        url = absolute_url(link_match.group("href"))
+        if url in seen_urls:
+            continue
+        seen_urls.add(url)
+        items.append(
+            {
+                "title": strip_markup(link_match.group("title")),
+                "description": "",
+                "url": url,
+                "domain": "news.nate.com",
+                "source_name": strip_markup(source_match.group("source")),
+                "pub_date": email.utils.format_datetime(datetime.now(KST)),
+                "rank_source": "nate_ent_pop",
+                "rank_position": rank,
+                "image_candidates": [],
+            }
+        )
+        if len(items) >= limit:
+            break
+    return items
+
+
+def collect_news(queries: list[str], display: int, limit: int, nate_rank_limit: int) -> dict:
     candidates_by_url: dict[str, dict] = {}
     errors: list[dict[str, str]] = []
+
+    if nate_rank_limit > 0:
+        try:
+            for raw in fetch_nate_rank(nate_rank_limit):
+                title = clean_text(raw.get("title", ""))
+                description = clean_text(raw.get("description", ""))
+                url = raw.get("url") or ""
+                pub_date = raw.get("pub_date", "")
+                if not title or not url or not pub_date:
+                    continue
+                pub_dt = parse_pub_date(pub_date)
+                combined = f"{title} {description}"
+                candidates_by_url[url] = {
+                    "title": title,
+                    "description": description,
+                    "url": url,
+                    "domain": raw.get("domain") or domain_from_url(url),
+                    "source_name": raw.get("source_name") or raw.get("domain") or domain_from_url(url),
+                    "pub_date": pub_date,
+                    "pub_date_kst": pub_dt.isoformat(),
+                    "pub_dt": pub_dt,
+                    "source_query": "nate_rank",
+                    "source_queries": ["nate_rank"],
+                    "important_keywords": keyword_hits(combined, IMPORTANT_KEYWORDS),
+                    "safety_flags": keyword_hits(combined, SENSITIVE_KEYWORDS),
+                    "attention_terms": attention_terms(title, description),
+                    "normalized_title": normalize_title(title),
+                    "rank_source": raw.get("rank_source", ""),
+                    "rank_position": raw.get("rank_position"),
+                    "image_candidates": raw.get("image_candidates") or [],
+                }
+        except Exception as exc:
+            errors.append({"query": "nate_rank", "error": str(exc)})
 
     for query in queries:
         try:
@@ -281,6 +431,9 @@ def collect_news(queries: list[str], display: int, limit: int) -> dict:
                 "safety_flags": keyword_hits(combined, SENSITIVE_KEYWORDS),
                 "attention_terms": attention_terms(title, description),
                 "normalized_title": normalize_title(title),
+                "rank_source": raw.get("rank_source", ""),
+                "rank_position": raw.get("rank_position"),
+                "image_candidates": raw.get("image_candidates") or [],
             }
 
             existing = candidates_by_url.get(url)
@@ -333,6 +486,7 @@ def collect_news(queries: list[str], display: int, limit: int) -> dict:
                 cluster_size,
                 cluster_domains,
                 merged_queries,
+                candidate.get("rank_position"),
             )
             scored_candidates.append((score, interest_score, merged_queries, candidate))
 
@@ -348,6 +502,9 @@ def collect_news(queries: list[str], display: int, limit: int) -> dict:
                 source_query=candidate["source_query"],
                 source_queries=merged_queries,
                 source_name=candidate["source_name"],
+                rank_source=candidate.get("rank_source") or "",
+                rank_position=candidate.get("rank_position"),
+                image_candidates=candidate.get("image_candidates") or [],
                 score=score,
                 interest_score=interest_score,
                 cluster_size=cluster_size,
@@ -364,6 +521,7 @@ def collect_news(queries: list[str], display: int, limit: int) -> dict:
         "generated_at": generated_at,
         "timezone": "Asia/Seoul",
         "source": "rss",
+        "rank_sources": ["nate_ent_pop"] if nate_rank_limit > 0 else [],
         "queries": queries,
         "display_per_query": display,
         "candidate_count": len(candidates_by_url),
@@ -385,6 +543,7 @@ def main() -> int:
     parser.add_argument("--queries", help="Comma-separated query terms. Defaults to entertainment-related terms.")
     parser.add_argument("--display", type=int, default=20, help="RSS items per query.")
     parser.add_argument("--limit", type=int, default=12, help="Maximum selected items to output.")
+    parser.add_argument("--nate-rank-limit", type=int, default=30, help="Nate entertainment ranking items to include.")
     parser.add_argument("--output", type=Path, help="Optional JSON output path.")
     args = parser.parse_args()
 
@@ -392,7 +551,7 @@ def main() -> int:
         print("--display must be at least 1.", file=sys.stderr)
         return 2
 
-    payload = collect_news(parse_queries(args.queries), args.display, args.limit)
+    payload = collect_news(parse_queries(args.queries), args.display, args.limit, args.nate_rank_limit)
     if payload["errors"] and not payload["items"]:
         for error in payload["errors"]:
             print(f"ERROR: {error['query']}: {error['error']}", file=sys.stderr)

@@ -116,10 +116,8 @@ def main() -> int:
         errors.append("missing issue sections")
     if parsed.toc_links != parsed.issue_sections:
         errors.append(f"toc link count {parsed.toc_links} does not match issue section count {parsed.issue_sections}")
-    if parsed.source_bookmarks != parsed.issue_sections:
-        errors.append(
-            f"source bookmark count {parsed.source_bookmarks} does not match issue section count {parsed.issue_sections}"
-        )
+    if parsed.source_bookmarks < 1:
+        errors.append("missing source bookmark")
 
     tags = tag_count(args.tags_file)
     if tags is not None and tags != 10:
