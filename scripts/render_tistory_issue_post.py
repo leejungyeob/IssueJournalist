@@ -804,8 +804,6 @@ def render_issue_sections(sections: list[tuple[str, list[str]]], image_blocks: d
         image_html = ""
         if index == 2 and image_blocks["core"]:
             image_html = "\n" + image_blocks["core"]
-        if index == 4 and image_blocks["reaction"]:
-            image_html = "\n" + image_blocks["reaction"]
         chunks.append(
             f"""    <section id="issue-{index}">
       <h2>{escape(heading)}</h2>
@@ -1017,32 +1015,32 @@ def closing_paragraph(item: dict, related_articles: list[dict]) -> str:
         )
     if "한예리" in title and ("백상" in title or "워스트" in title):
         return (
-            "정리하면 이번 이야기는 워스트 드레스라는 평가보다 한예리가 직접 남긴 말이 더 크게 남습니다. "
-            "호불호는 갈릴 수 있지만, 본인이 선택한 스타일을 스스로 좋았다고 말한 점이 핵심입니다."
+            "이번 이야기는 워스트 드레스라는 평가보다 한예리가 직접 남긴 말이 더 크게 와닿았습니다. "
+            "호불호는 갈릴 수 있지만, 본인이 선택한 스타일을 스스로 좋았다고 말하는 당당한 모습에서 더욱 응원하게 되는 것 같습니다."
         )
     if "아이오아이" in title and any(keyword in title for keyword in ["신곡", "반응", "강미나"]):
         return (
-            "정리하면 아이오아이 신곡 이야기는 기대감이 큰 만큼 반응도 빨리 갈린 경우입니다. "
-            "지금은 챌린지와 기사에 나온 반응만 확인하고, 전체 곡은 공개 이후 다시 보면 될 것 같습니다."
+            "아이오아이 신곡 이야기는 기대가 컸던 만큼 첫 반응도 빨리 갈린 것 같습니다. "
+            "아직 짧은 구간만 보고 나온 말도 많으니, 전체 곡이 공개된 뒤에는 또 다른 매력이 보일 수도 있겠다는 생각이 듭니다."
         )
     if "김지민" in title and any(keyword in title for keyword in ["시험관", "난임센터"]):
         return (
-            "정리하면 김지민의 이번 이야기는 방송 속 짧은 고백이지만 꽤 현실적인 무게가 있었습니다. "
-            "결과보다 과정이 더 크게 느껴지는 내용이라, 담담하게 근황을 확인하는 정도가 좋아 보입니다."
+            "김지민의 이번 이야기는 방송 속 짧은 고백이었지만 꽤 현실적인 무게가 느껴졌습니다. "
+            "쉽게 꺼내기 어려운 과정을 담담하게 말한 만큼, 좋은 소식으로 이어지길 조용히 응원하게 됩니다."
         )
     if "니요" in title and any(keyword in title for keyword in ["동시 연애", "관계"]):
         return (
-            "정리하면 니요의 이번 이야기는 관계 형태를 직접 공개하면서 나온 사생활 이슈입니다. "
-            "호불호를 바로 판단하기보다, 본인이 설명한 선택과 그 이후의 반응을 분리해서 보는 게 맞겠습니다."
+            "니요의 이번 이야기는 관계 형태를 직접 공개하면서 나온 사생활 이슈였습니다. "
+            "누구나 쉽게 공감할 수 있는 방식은 아니지만, 적어도 본인이 책임 있게 설명하려 했다는 점은 따로 보고 싶습니다."
         )
     if related_articles:
         return (
-            f"정리하면 {entity} 이야기는 제목보다 본문에 나온 말과 배경을 먼저 보면 됩니다. "
-            "지금은 확인된 내용만 체크하고, 후속 내용이 나오면 그때 이어서 보면 될 것 같습니다."
+            f"{entity} 이야기는 제목보다 본문에 나온 말과 배경을 먼저 보게 됩니다. "
+            "크게 단정하기보다는 지금 나온 내용을 차분히 보고, 좋은 방향의 후속 소식도 함께 기다려보면 좋겠습니다."
         )
     return (
-        f"정리하면 {entity} 이야기는 제목만 크게 보기보다 기사 안에 나온 말부터 차분히 보면 됩니다. "
-        "지금은 발언과 배경 정도만 체크해두면 될 것 같습니다."
+        f"{entity} 이야기는 제목만 크게 보기보다 기사 안에 나온 말부터 차분히 보게 됩니다. "
+        "짧은 소식이어도 그 안에서 남는 포인트가 있으니, 다음 흐름도 가볍게 지켜보면 좋겠습니다."
     )
 
 
@@ -1063,16 +1061,51 @@ def render_related_articles(articles: list[dict]) -> str:
 
 def image_key(image: dict) -> str:
     url = clean_text(image.get("url", ""))
-    return re.sub(r"[?#].*$", "", url).rsplit("/", 1)[-1] or url
+    url = re.sub(r"[?#].*$", "", url)
+    if "/orgImg/" in url:
+        return url.split("/orgImg/", 1)[1].lstrip("/")
+    return url.rsplit("/", 1)[-1] or url
 
 
-def selected_images(images: list[dict], limit: int = 3) -> list[dict]:
-    selected: list[dict] = []
-    seen: set[str] = set()
+def image_quality_score(image: dict) -> int:
+    url = clean_text(image.get("url", ""))
+    source_url = clean_text(image.get("source_article_url") or "")
+    score = 0
+    if "googleusercontent.com" in url:
+        score -= 100
+    if "view610" in url:
+        score += 40
+    if "orgImg" in url:
+        score += 20
+    if "news90" in url or "mnews90" in url:
+        score -= 30
+    if source_url and "news.nate.com" in source_url:
+        score += 10
+    return score
+
+
+def selected_images(images: list[dict], limit: int = 2) -> list[dict]:
+    best_by_key: dict[str, dict] = {}
     for image in images:
         url = clean_text(image.get("url", ""))
-        if not url:
+        if not url or "googleusercontent.com" in url:
             continue
+        key = image_key(image)
+        current = best_by_key.get(key)
+        if current is None or image_quality_score(image) > image_quality_score(current):
+            best_by_key[key] = image
+
+    selected: list[dict] = []
+    seen: set[str] = set()
+    high_quality = [image for image in best_by_key.values() if "view610" in clean_text(image.get("url", ""))]
+    fallback = [
+        image
+        for image in best_by_key.values()
+        if "news90" not in clean_text(image.get("url", "")) and "mnews90" not in clean_text(image.get("url", ""))
+    ]
+    pool = high_quality or fallback
+    for image in sorted(pool, key=image_quality_score, reverse=True):
+        url = clean_text(image.get("url", ""))
         key = image_key(image)
         if key in seen:
             continue
@@ -1086,10 +1119,11 @@ def selected_images(images: list[dict], limit: int = 3) -> list[dict]:
 def render_image(image: dict, entity: str, caption: str) -> str:
     source_name = clean_text(image.get("source_name") or "원문")
     source_url = clean_text(image.get("source_article_url") or "")
+    caption_text = f"{caption} " if caption else ""
     return f"""
       <figure class="news-image">
         <img src="{escape(image.get("url", ""))}" alt="{escape(entity)} 관련 이미지" loading="lazy">
-        <figcaption>{escape(caption)} <a href="{escape(source_url)}" target="_blank" rel="noopener noreferrer">이미지 출처: {escape(source_name)}</a></figcaption>
+        <figcaption>{escape(caption_text)}<a href="{escape(source_url)}" target="_blank" rel="noopener noreferrer">이미지 출처: {escape(source_name)}</a></figcaption>
       </figure>
 """.rstrip()
 
@@ -1097,12 +1131,8 @@ def render_image(image: dict, entity: str, caption: str) -> str:
 def render_images(item: dict, images: list[dict]) -> dict[str, str]:
     entity = lead_entity(item)
     candidates = selected_images(images)
-    blocks = {"intro": "", "core": "", "reaction": ""}
-    captions = [
-        f"기사에서 함께 제공된 {entity} 관련 이미지입니다.",
-        f"{entity} 이슈를 정리하며 함께 보기 좋은 이미지입니다.",
-        "본문에서 언급한 흐름과 같이 볼 수 있는 참고 이미지입니다.",
-    ]
+    blocks = {"intro": "", "core": ""}
+    captions = ["", ""]
     for slot, image, caption in zip(blocks, candidates, captions):
         blocks[slot] = render_image(image, entity, caption)
     return blocks
