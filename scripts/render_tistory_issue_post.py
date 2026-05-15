@@ -776,7 +776,7 @@ def sensitive_blog_sections(item: dict) -> list[tuple[str, list[str]]]:
             "조금 더 지켜볼 부분",
             [
                 "민감한 이슈일수록 제목에 들어간 단어가 본문보다 더 크게 남습니다. 임신설, 협박설, 편집설 같은 표현은 특히 출처와 확인 여부가 먼저 눈에 들어왔습니다.",
-                "정리하면 지금 기사에서는 방송 장면, 온라인 주장, 시청자 반응이 한꺼번에 다뤄졌습니다. 이후 방송이나 추가 보도가 나오면 관련 내용도 이어서 정리하겠습니다.",
+                "지금 기사에서는 방송 장면, 온라인 주장, 시청자 반응이 한꺼번에 다뤄졌습니다. 이후 방송이나 추가 보도가 나오면 관련 내용도 이어서 정리하겠습니다.",
             ],
         ),
     ]
@@ -1002,7 +1002,7 @@ def interest_paragraph(item: dict, related_articles: list[dict]) -> str:
     if "한예리" in title and ("백상" in title or "워스트" in title):
         return (
             "기사에서 먼저 보이는 건 '워스트 드레서'나 '달걀프라이' 같은 반응이지만, "
-            "실제로는 한예리가 자신의 드레스 선택에 대해 직접 입장을 남긴 내용입니다."
+            "실제로는 한예리가 자신이 고른 드레스를 두고 직접 입장을 남긴 내용입니다."
         )
     if "아이오아이" in title and any(keyword in title for keyword in ["신곡", "반응", "강미나"]):
         return (
@@ -1084,7 +1084,7 @@ def closing_paragraph(item: dict, related_articles: list[dict]) -> str:
     title = clean_text(item.get("title", ""))
     if all(keyword in title for keyword in ["김연아", "고우림"]) and "강남" in title:
         return (
-            "정리하면 이번 이야기는 김연아·고우림 부부의 갈등이라기보다, 예능 예고 속 짧은 대화가 기사 제목으로 커진 경우입니다. "
+            "이번 이야기는 김연아·고우림 부부의 갈등이라기보다, 예능 예고 속 짧은 대화가 기사 제목으로 커진 경우였습니다. "
             "방송이 공개되면 실제 분위기는 더 가볍게 느껴질 가능성이 큽니다."
         )
     if "손승원" in title and "음주운전" in title:
