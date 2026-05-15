@@ -158,7 +158,15 @@ def absolute_url(value: str, base: str = "https://news.nate.com") -> str:
 
 
 def keyword_hits(text: str, keywords: list[str]) -> list[str]:
-    return [keyword for keyword in keywords if keyword in text]
+    hits: list[str] = []
+    for keyword in keywords:
+        if keyword == "극단":
+            if re.search(r"극단(?:적(?:인)?\s*)?(?:선택|시도)", text):
+                hits.append(keyword)
+            continue
+        if keyword in text:
+            hits.append(keyword)
+    return hits
 
 
 def attention_terms(title: str, description: str) -> list[str]:
