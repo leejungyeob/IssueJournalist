@@ -163,6 +163,9 @@ def entity_candidates(item: dict) -> list[str]:
 
 
 def lead_entity(item: dict) -> str:
+    title = clean_text(item.get("title", ""))
+    if "아이오아이" in title:
+        return "아이오아이"
     for raw_term in entity_candidates(item):
         term = meaningful_display_term(raw_term)
         if not term:
@@ -227,6 +230,12 @@ def title_candidates(item: dict) -> list[str]:
             "한예리 워스트 드레서 언급에 남긴 말",
             "한예리 드레스 호불호 반응 정리",
         ]
+    elif "아이오아이" in title and any(keyword in title for keyword in ["신곡", "반응", "강미나"]):
+        candidates = [
+            "아이오아이 신곡 반응, 갑자기 공개된 챌린지",
+            "아이오아이 10주년 신곡 갑자기 반응 정리",
+            "아이오아이 신곡 반응과 강미나 언급까지",
+        ]
     elif sensitive_title:
         candidates = [
             f"{entity} 루머성 보도 정리, 확인된 내용만 보기",
@@ -268,6 +277,11 @@ def blog_summary(item: dict, related_articles: list[dict]) -> str:
     entity = lead_entity(item)
     title = clean_text(item.get("title", ""))
     related_count = len(related_articles)
+    if "아이오아이" in title and any(keyword in title for keyword in ["신곡", "반응", "강미나"]):
+        return (
+            "아이오아이 10주년 신곡 관련 기사가 올라왔습니다. "
+            "먼저 공개된 챌린지와 기사에 언급된 반응을 중심으로 정리했습니다."
+        )
     if all(keyword in title for keyword in ["김연아", "고우림"]) and "강남" in title:
         return (
             "김연아·고우림 부부 이야기가 예능 예고 속 강남의 한마디로 다시 언급됐습니다. "
@@ -414,6 +428,15 @@ def hanyeri_style_summary(sentences: list[str]) -> list[str]:
     ]
 
 
+def ioi_song_summary(sentences: list[str]) -> list[str]:
+    release = sentence_with(sentences, ["발매"]) or ""
+    return [
+        "아이오아이의 신곡을 두고 반응이 갈리고 있습니다. 데뷔 10주년을 기념한 미니앨범 소식이라 기대가 컸던 만큼, 먼저 공개된 짧은 챌린지 영상에도 말이 붙었습니다.",
+        soften_sentence(release, 180) if release else "아이오아이는 데뷔 10주년을 기념한 새 앨범을 준비하고 있습니다.",
+        "기사에는 '난해하다'거나 곡 선정이 아쉽다는 반응과, '묘한 중독성이 있다'며 좋게 보는 반응이 함께 소개됐습니다.",
+    ]
+
+
 def sensitive_news_summary(item: dict, sentences: list[str]) -> list[str]:
     entity = lead_entity(item)
     claim = sentence_with(sentences, ["주장"]) or first_meaningful_sentence(sentences)
@@ -446,6 +469,8 @@ def general_news_summary(item: dict, sentences: list[str]) -> list[str]:
     title = clean_text(item.get("title", ""))
     if "한예리" in title and ("백상" in title or "워스트" in title):
         return hanyeri_style_summary(sentences)
+    if "아이오아이" in title and any(keyword in title for keyword in ["신곡", "반응", "강미나"]):
+        return ioi_song_summary(sentences)
 
     first = first_meaningful_sentence(sentences)
     quotes = quoted_phrases(sentences)
@@ -563,6 +588,57 @@ def article_reaction_sentence(item: dict) -> str:
     return ""
 
 
+def has_title_keywords(item: dict, keywords: list[str]) -> bool:
+    title = clean_text(item.get("title", ""))
+    return any(keyword in title for keyword in keywords)
+
+
+def section_two_heading(item: dict) -> str:
+    if has_title_keywords(item, ["한예리"]) and has_title_keywords(item, ["백상", "워스트"]):
+        return "한예리가 직접 남긴 말"
+    if has_title_keywords(item, ["아이오아이"]) and has_title_keywords(item, ["신곡", "반응", "강미나"]):
+        return "아이오아이 10주년 신곡"
+    if item.get("safety_flags"):
+        return "확인된 내용과 주장성 표현"
+    if has_title_keywords(item, ["위경련", "탈수", "불참"]):
+        return "건강 문제로 빠진 일정"
+    if has_title_keywords(item, ["컴백", "신곡", "발매", "챌린지"]):
+        return "신곡 공개와 반응"
+    if has_title_keywords(item, ["니요", "동시 연애", "관계"]):
+        return "니요가 밝힌 관계"
+    return "기사에서 확인된 내용"
+
+
+def section_four_heading(item: dict) -> str:
+    if has_title_keywords(item, ["한예리"]) and has_title_keywords(item, ["백상", "워스트"]):
+        return "워스트 반응보다 남은 말"
+    if has_title_keywords(item, ["아이오아이"]) and has_title_keywords(item, ["신곡", "반응", "강미나"]):
+        return "곡 분위기에 갈린 의견"
+    if item.get("safety_flags"):
+        return "조심해서 봐야 할 부분"
+    if has_title_keywords(item, ["위경련", "탈수", "불참"]):
+        return "소속사가 전한 휴식과 안정"
+    if has_title_keywords(item, ["컴백", "신곡", "발매", "챌린지"]):
+        return "함께 볼 배경"
+    return "조금 더 보면"
+
+
+def contextual_sentence(item: dict, preferred_keywords: list[str] | None = None) -> str:
+    sentences = article_sentences(item)
+    if not sentences:
+        return ""
+    preferred_keywords = preferred_keywords or []
+    if preferred_keywords:
+        for sentence in sentences:
+            if any(keyword in sentence for keyword in preferred_keywords):
+                return sentence
+    reaction = article_reaction_sentence(item)
+    for sentence in sentences[1:]:
+        if sentence != reaction:
+            return sentence
+    return sentences[0]
+
+
 def interest_paragraph(item: dict, related_articles: list[dict]) -> str:
     terms = keyword_terms(item)
     term_text = "·".join(terms[:4])
@@ -572,16 +648,24 @@ def interest_paragraph(item: dict, related_articles: list[dict]) -> str:
             "이 이야기는 김연아·고우림 부부와 강남·이상화 부부의 예능 토크가 함께 묶이면서 기사화됐습니다. "
             "실제 내용은 부부 갈등이라기보다 방송 예고 속 짧은 대화에 가깝습니다."
         )
+    if "한예리" in title and ("백상" in title or "워스트" in title):
+        return (
+            "기사에서 먼저 보이는 건 '워스트 드레서'나 '달걀프라이' 같은 반응이지만, "
+            "실제로는 한예리가 자신의 드레스 선택에 대해 직접 입장을 남긴 내용입니다."
+        )
+    if "아이오아이" in title and any(keyword in title for keyword in ["신곡", "반응", "강미나"]):
+        return (
+            "이번 이슈는 컴백 자체보다 먼저 공개된 타이틀곡 '갑자기' 챌린지 반응에서 시작됐습니다. "
+            "짧은 구간만 공개된 상태라 전체 곡 분위기는 본 발매 이후 다시 봐야 합니다."
+        )
     if item.get("safety_flags"):
         return (
             "이슈가 된 부분은 임신설, 편집 요구설, 통편집설 같은 표현이 방송 장면과 함께 묶였다는 점입니다. "
             "다만 이런 내용은 확인된 장면과 온라인 주장성 표현을 나눠서 봐야 합니다."
         )
-    if related_articles:
-        return (
-            f"기사화된 포인트는 {term_text}입니다. "
-            "인물 이름만 따로 보기보다, 실제로 어떤 발언과 장면이 있었는지 같이 보는 편이 자연스럽습니다."
-        )
+    context = contextual_sentence(item, ["발매", "공개", "출연", "소속사", "휴식", "안정", "관계", "선택권"])
+    if context:
+        return soften_sentence(context, 190)
     return f"기사화된 포인트는 {term_text}입니다. 지금은 기사에 나온 내용만 가볍게 확인하면 됩니다."
 
 
@@ -593,6 +677,11 @@ def public_reaction_paragraph(item: dict, related_articles: list[dict]) -> str:
         return (
             "기사 내용만 보면 실제 부부싸움을 확인한 이야기는 아닙니다. "
             "강남이 예능식으로 받아친 말이 제목에 크게 잡힌 쪽에 가깝습니다."
+        )
+    if "아이오아이" in title and any(keyword in title for keyword in ["신곡", "반응", "강미나"]):
+        return (
+            "기사에 언급된 반응은 꽤 갈립니다. '난해하다'는 쪽도 있고, "
+            "'한 번 들어도 흥얼거리게 된다'며 좋게 보는 쪽도 함께 나왔습니다."
         )
     if reaction:
         return f"기사 안에 언급된 반응만 보면, {soften_sentence(reaction, 190)}"
@@ -607,27 +696,35 @@ def public_reaction_paragraph(item: dict, related_articles: list[dict]) -> str:
     )
 
 
-def personal_interpretation(item: dict, related_articles: list[dict]) -> str:
+def extra_context_paragraph(item: dict, related_articles: list[dict]) -> str:
     entity = lead_entity(item)
     title = clean_text(item.get("title", ""))
     if all(keyword in title for keyword in ["김연아", "고우림"]) and "강남" in title:
         return (
-            "개인적으로는 이걸 부부싸움 이슈로 크게 볼 필요는 없어 보입니다. "
-            "예능에서 흔히 나오는 생활형 에피소드이고, 오히려 강남·이상화 부부와 김연아·고우림 부부의 분위기 차이가 재미 포인트에 가깝습니다."
+            "예능에서는 짧은 농담이 제목으로 크게 잡히는 경우가 많습니다. "
+            "이번 내용도 실제 갈등보다는 방송에서 나온 생활형 에피소드에 가깝습니다."
+        )
+    if "한예리" in title and ("백상" in title or "워스트" in title):
+        return (
+            "이 소식은 드레스 평가보다 한예리가 직접 남긴 말이 더 크게 남습니다. "
+            "본인이 입고 싶은 드레스를 입었고, 그 선택에 만족했다는 점이 핵심입니다."
+        )
+    if "아이오아이" in title and any(keyword in title for keyword in ["신곡", "반응", "강미나"]):
+        return (
+            "아직은 챌린지로 공개된 일부 구간만 두고 나온 반응입니다. "
+            "전체 음원이 공개되면 지금과는 다른 평가가 나올 수도 있습니다."
         )
     if item.get("safety_flags"):
         return (
-            f"개인적으로는 이런 종류의 {entity} 이야기는 조금 천천히 보는 게 좋다고 생각합니다. "
+            f"{entity} 관련 이야기는 조금 천천히 보는 게 좋겠습니다. "
             "제목이 강하게 보일수록 실제 내용과 추측처럼 보이는 표현을 나눠 읽어야 합니다."
         )
-    if related_articles:
-        return (
-            "개인적으로는 이런 이야기를 너무 복잡하게 볼 필요는 없다고 봅니다. "
-            "누가 어떤 말을 했고, 그 말에 어떤 반응이 붙었는지만 보면 충분합니다."
-        )
+    context = contextual_sentence(item, ["소속사", "휴식", "안정", "컴백", "앨범", "일정", "선택권", "자발", "동의"])
+    if context:
+        return soften_sentence(context, 190)
     return (
-        "개인적으로는 아직 크게 의미를 붙이기보다는 가볍게 체크할 소식에 가깝다고 봅니다. "
-        "후속 내용이 나오면 그때 맥락을 다시 보면 됩니다."
+        "지금 나온 내용만 보면 크게 덧붙일 부분은 많지 않습니다. "
+        "기사에 나온 발언과 상황만 확인하고 넘어가면 될 것 같습니다."
     )
 
 
@@ -643,6 +740,11 @@ def closing_paragraph(item: dict, related_articles: list[dict]) -> str:
         return (
             f"{entity} 관련 이야기는 제목만 보고 단정하기보다 조금 차분히 보는 편이 좋겠습니다. "
             "새로운 내용이 나오면 그때 사실관계를 중심으로 다시 확인하면 됩니다."
+        )
+    if "아이오아이" in title and any(keyword in title for keyword in ["신곡", "반응", "강미나"]):
+        return (
+            "정리하면 아이오아이 신곡 이야기는 기대감이 큰 만큼 반응도 빨리 갈린 경우입니다. "
+            "지금은 챌린지와 기사에 나온 반응만 확인하고, 전체 곡은 공개 이후 다시 보면 될 것 같습니다."
         )
     if related_articles:
         return (
@@ -729,8 +831,10 @@ def render_html(item: dict, tags: list[str], related_articles: list[dict] | None
     news_summary = "\n".join(f"      <p>{escape(paragraph)}</p>" for paragraph in news_summary_paragraphs(item))
     interest = interest_paragraph(item, related_articles)
     public_reaction = public_reaction_paragraph(item, related_articles)
-    interpretation = personal_interpretation(item, related_articles)
+    extra_context = extra_context_paragraph(item, related_articles)
     closing = closing_paragraph(item, related_articles)
+    detail_heading = section_two_heading(item)
+    extra_heading = section_four_heading(item)
 
     return f"""<!doctype html>
 <html lang="ko">
@@ -838,7 +942,7 @@ def render_html(item: dict, tags: list[str], related_articles: list[dict] | None
     </section>
 
     <section id="issue-2">
-      <h2>이슈가 된 부분</h2>
+      <h2>{escape(detail_heading)}</h2>
       <p>{escape(interest)}</p>
       <p>그래서 이 글에서는 확인된 발언과 기사에 나온 배경만 중심으로 정리했습니다.</p>
     </section>
@@ -852,8 +956,8 @@ def render_html(item: dict, tags: list[str], related_articles: list[dict] | None
     </section>
 
     <section id="issue-4">
-      <h2>가볍게 덧붙이면</h2>
-      <p>{escape(interpretation)}</p>
+      <h2>{escape(extra_heading)}</h2>
+      <p>{escape(extra_context)}</p>
       <p>확인되지 않은 내용은 따로 키우지 않고, 기사에 나온 내용만 기준으로 보는 게 맞겠습니다.</p>
     </section>
 
