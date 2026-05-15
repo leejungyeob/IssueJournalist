@@ -52,6 +52,11 @@ ENTITY_STOPWORDS = {
     "동시",
     "조화로운",
     "있어야",
+    "징역형에",
+    "면제",
+    "출소",
+    "여친에",
+    "블박",
 }
 NOISY_TERM_SUFFIXES = (
     "는데",
@@ -99,6 +104,10 @@ def keyword_tags(item: dict, base_tags: list[str]) -> list[str]:
         display_term = meaningful_display_term(str(term)) or str(term)
         tag = re.sub(r"[^0-9A-Za-z가-힣]", "", display_term).strip()
         if len(tag) < 2 or tag in tags:
+            continue
+        if len(tag) > 15:
+            continue
+        if tag.startswith("징역형"):
             continue
         if tag in ENTITY_STOPWORDS or tag.endswith(NOISY_TERM_SUFFIXES):
             continue
@@ -178,6 +187,16 @@ def lead_entity(item: dict) -> str:
     title = clean_text(item.get("title", ""))
     if "아이오아이" in title:
         return "아이오아이"
+    numbered_cast = re.search(r"\d+기\s*[A-Za-z가-힣0-9]{2,}", title)
+    if numbered_cast:
+        term = meaningful_display_term(numbered_cast.group(0))
+        if term:
+            return term
+    comma_name = re.search(r"([가-힣]{2,4}),", title)
+    if comma_name:
+        term = meaningful_display_term(comma_name.group(1))
+        if term:
+            return term
     for raw_term in entity_candidates(item):
         term = meaningful_display_term(raw_term)
         if not term:
@@ -272,6 +291,12 @@ def title_candidates(item: dict) -> list[str]:
             "니요 3년째 조화로운 관계, 기사 내용 정리",
             "니요 다자 연애 고백, 선택권 언급까지",
         ]
+    elif "손승원" in title and "음주운전" in title:
+        candidates = [
+            "손승원 음주운전 재판, 다시 나온 기사 내용",
+            "손승원 출소 후 음주운전, 기사 속 쟁점 정리",
+            "손승원 무면허 운전까지, 확인된 내용만 보기",
+        ]
     elif "컴백" in title or "컴백" in (item.get("important_keywords") or []):
         candidates = [
             f"{entity} 컴백 소식, 팬들이 먼저 본 포인트",
@@ -321,6 +346,13 @@ def blog_summary(item: dict, related_articles: list[dict]) -> str:
             "워스트 드레서 반응까지 붙었지만, 정작 한예리는 꽤 담담하게 자기 생각을 남겼어요. "
             "꽃 장식이 큰 화이트 드레스라 온라인에서 호불호가 갈렸고, 그 반응을 본 뒤 직접 글을 올린 흐름입니다. "
             "드레스가 예뻤냐 아니냐보다, 본인이 그 선택을 어떻게 받아들였는지가 더 남는 이야기입니다."
+        )
+    if "손승원" in title and "음주운전" in title:
+        return (
+            "손승원 음주운전 관련 재판 소식이 다시 기사로 나왔습니다. "
+            "과거 음주운전으로 실형을 받은 이력이 있는 만큼, 이번 보도는 단순한 사건 기사보다 더 무겁게 읽힙니다. "
+            "기사에는 음주운전 사고와 도주 혐의, 블랙박스 저장장치 관련 부탁, 무면허 운전 정황까지 함께 담겼습니다. "
+            "민감한 사안이라 감정적으로 키우기보다 확인된 내용 중심으로 정리해보겠습니다."
         )
     if item.get("safety_flags"):
         return (
@@ -387,6 +419,7 @@ def strip_article_noise(sentence: str) -> str:
     sentence = clean_text(sentence)
     sentence = re.sub(r"^\[[^\]]+\]\s*", "", sentence)
     sentence = re.sub(r"^\*?재판매 및 DB 금지\s*", "", sentence)
+    sentence = re.sub(r"^[^=\s]{1,20}\s*[^=\s]{0,20}/사진=[^\s]+\s*", "", sentence)
     sentence = re.sub(r"^\([^)]{1,40}기자\)\s*", "", sentence)
     sentence = re.sub(r"^[가-힣A-Za-z·\s]{2,20}\s*기자\s*=\s*", "", sentence)
     sentence = re.sub(r"^/[A-Za-z가-힣+·\s]+‘[^’]{2,40}’\s*", "", sentence)
@@ -404,6 +437,11 @@ def soften_sentence(sentence: str, max_len: int = 170) -> str:
         "솔직한 생각을 밝혔다": "직접 생각을 남겼습니다",
         "입장을 밝혔다": "입장을 전했습니다",
         "토로했다": "털어놨습니다",
+        "물의를 빚었다": "물의를 빚었습니다",
+        "재판을 가졌다": "재판을 받았습니다",
+        "알려졌다": "알려졌습니다",
+        "포착됐다": "포착됐습니다",
+        "전해졌다": "전해졌습니다",
         "근황을 공개했다": "근황을 공개했습니다",
         "공개했다": "공개했습니다",
         "공개됐다": "공개됐습니다",
@@ -744,6 +782,45 @@ def sensitive_blog_sections(item: dict) -> list[tuple[str, list[str]]]:
     ]
 
 
+def drunk_driving_blog_sections(item: dict) -> list[tuple[str, list[str]]]:
+    sentences = article_sentences(item)
+    used: set[str] = set()
+    first = pick_section_sentence(sentences, ["음주운전", "물의", "범행"], used)
+    trial = pick_section_sentence(sentences, ["재판", "도주", "혐의"], used)
+    blackbox = pick_section_sentence(sentences, ["블랙박스", "저장장치", "여자친구"], used)
+    past = pick_section_sentence(sentences, ["2018", "실형", "군", "면제"], used)
+    return [
+        (
+            "다시 나온 음주운전 보도",
+            [
+                section_fact(first, "손승원 음주운전 관련 보도가 다시 나왔습니다."),
+                "이 이슈가 더 무겁게 읽히는 건 처음 나온 실수가 아니라는 점 때문입니다. 이미 과거 같은 문제로 크게 다뤄진 적이 있어서, 이번 기사도 단순 근황처럼 넘기기 어렵습니다.",
+            ],
+        ),
+        (
+            "재판에서 언급된 혐의",
+            [
+                section_fact(trial, "기사에는 음주운전 사고와 도주 혐의가 함께 언급됐습니다."),
+                "법적 판단은 재판 절차에서 확인될 부분입니다. 다만 기사에 나온 내용만 봐도 음주운전, 사고, 도주 혐의가 함께 묶여 있어 사안이 가볍지 않아 보입니다.",
+            ],
+        ),
+        (
+            "블랙박스 저장장치 이야기",
+            [
+                section_fact(blackbox, "기사에는 사건 직후 블랙박스 저장장치와 관련한 정황도 담겼습니다."),
+                "이 부분은 대중 반응이 더 날카로워질 수밖에 없는 대목입니다. 사고 이후의 태도까지 기사에 언급되면, 단순한 실수로 받아들이기 어려워지기 때문입니다.",
+            ],
+        ),
+        (
+            "과거 이력이 함께 언급된 이유",
+            [
+                section_fact(past, "과거 음주운전 이력도 기사에서 다시 언급됐습니다."),
+                "반복된 음주운전은 연예인 이미지 문제를 넘어 안전과 책임의 문제로 이어집니다. 그래서 이번 보도는 호불호가 아니라, 같은 문제가 반복됐다는 점에서 비판이 커질 수밖에 없어 보입니다.",
+            ],
+        ),
+    ]
+
+
 def category_blog_blueprints(item: dict) -> list[tuple[str, list[str], str]]:
     title = clean_text(item.get("title", ""))
     if has_title_keywords(item, ["위경련", "탈수", "불참"]):
@@ -792,6 +869,8 @@ def reference_blog_sections(item: dict, related_articles: list[dict]) -> list[tu
         return hanyeri_blog_sections(item)
     if "아이오아이" in title and any(keyword in title for keyword in ["신곡", "반응", "강미나"]):
         return ioi_blog_sections(item)
+    if "손승원" in title and "음주운전" in title:
+        return drunk_driving_blog_sections(item)
     if item.get("safety_flags"):
         return sensitive_blog_sections(item)
     return generic_blog_sections(item)
@@ -1007,6 +1086,11 @@ def closing_paragraph(item: dict, related_articles: list[dict]) -> str:
         return (
             "정리하면 이번 이야기는 김연아·고우림 부부의 갈등이라기보다, 예능 예고 속 짧은 대화가 기사 제목으로 커진 경우입니다. "
             "방송이 공개되면 실제 분위기는 더 가볍게 느껴질 가능성이 큽니다."
+        )
+    if "손승원" in title and "음주운전" in title:
+        return (
+            "손승원 음주운전 보도는 읽는 사람 입장에서도 씁쓸함이 남는 이야기였습니다. "
+            "반복된 문제일수록 더 엄격하게 봐야 하고, 이번 일을 계기로 책임 있는 태도와 분명한 변화가 뒤따라야 한다고 생각합니다."
         )
     if item.get("safety_flags"):
         return (
