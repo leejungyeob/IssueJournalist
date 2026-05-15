@@ -90,12 +90,18 @@ class TistoryHTMLParser(HTMLParser):
         self.toc_links = 0
         self.source_bookmarks = 0
         self.news_images = 0
+        self.paragraphs: list[str] = []
         self._in_title = False
+        self._in_p = False
+        self._paragraph = ""
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         attr_map = {key: value or "" for key, value in attrs}
         if tag == "title":
             self._in_title = True
+        elif tag == "p":
+            self._in_p = True
+            self._paragraph = ""
         elif tag == "meta" and attr_map.get("name") == "description":
             self.meta_description = attr_map.get("content", "")
         elif tag == "meta" and attr_map.get("property") == "og:description":
@@ -116,10 +122,18 @@ class TistoryHTMLParser(HTMLParser):
     def handle_endtag(self, tag: str) -> None:
         if tag == "title":
             self._in_title = False
+        elif tag == "p":
+            paragraph = re.sub(r"\s+", " ", self._paragraph).strip()
+            if paragraph:
+                self.paragraphs.append(paragraph)
+            self._in_p = False
+            self._paragraph = ""
 
     def handle_data(self, data: str) -> None:
         if self._in_title:
             self.title += data
+        if self._in_p:
+            self._paragraph += data
 
 
 def read_text(path: Path) -> str:
@@ -131,6 +145,17 @@ def tag_count(path: Path | None) -> int | None:
         return None
     tags = [tag.strip() for tag in read_text(path).strip().split(",") if tag.strip()]
     return len(tags)
+
+
+def strip_direct_quotes(text: str) -> str:
+    return re.sub(r"“[^”]*”|\"[^\"]*\"|‘[^’]*’", "", text)
+
+
+def has_mixed_sentence_endings(paragraph: str) -> bool:
+    text = strip_direct_quotes(paragraph)
+    has_formal = re.search(r"(?:다|습니다)[.!?]", text) is not None
+    has_casual = re.search(r"(?:요|어요|아요|해요|네요|군요|죠|나요|가요|예요|이에요)[.!?]", text) is not None
+    return has_formal and has_casual
 
 
 def main() -> int:
@@ -148,6 +173,14 @@ def main() -> int:
     for pattern, guide in FORBIDDEN_PATTERN_GUIDES:
         if re.search(re.escape(pattern), html, flags=re.IGNORECASE):
             errors.append(f"forbidden phrase found: {pattern} -> {guide}")
+
+    for paragraph in parsed.paragraphs:
+        if has_mixed_sentence_endings(paragraph):
+            preview = paragraph[:90] + ("..." if len(paragraph) > 90 else "")
+            errors.append(
+                "mixed sentence endings found: 한 문단 안에서 다/습니다체와 요체가 섞였습니다 "
+                f"-> 기본 자동 초안은 다/습니다체로 통일하세요: {preview}"
+            )
 
     title_text = read_text(args.title_file).strip() if args.title_file else parsed.title.strip()
     if not title_text:
