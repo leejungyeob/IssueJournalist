@@ -120,7 +120,7 @@ def main() -> int:
         errors.append("og description differs from meta description")
     if parsed.issue_sections == 0:
         errors.append("missing issue sections")
-    if parsed.toc_links != parsed.issue_sections:
+    if parsed.toc_links and parsed.toc_links != parsed.issue_sections:
         errors.append(f"toc link count {parsed.toc_links} does not match issue section count {parsed.issue_sections}")
     if parsed.source_bookmarks < 1:
         errors.append("missing source bookmark")

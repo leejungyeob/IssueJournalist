@@ -270,19 +270,6 @@ def blog_summary(item: dict, related_articles: list[dict]) -> str:
     )
 
 
-def intro_paragraph(item: dict, related_articles: list[dict]) -> str:
-    entity = lead_entity(item)
-    if related_articles:
-        return (
-            f"{entity} 이야기가 다시 눈에 들어왔습니다. 처음엔 그냥 가벼운 연예 소식처럼 보였는데, "
-            "비슷한 제목의 기사들이 이어진 걸 보면 사람들이 궁금해하는 지점이 분명히 있었습니다."
-        )
-    return (
-        f"{entity} 관련 이야기가 하나 올라왔습니다. 아직 크게 번진 이슈라기보다는, "
-        "지금 나온 내용만 가볍게 확인해도 충분한 소식에 가깝습니다."
-    )
-
-
 def core_summary(item: dict, related_articles: list[dict]) -> str:
     entity = lead_entity(item)
     particle = object_particle(entity)
@@ -434,7 +421,6 @@ def render_html(item: dict, tags: list[str], related_articles: list[dict] | None
     summary = excerpt(blog_summary(item, related_articles), 150)
     related_block = render_related_articles(related_articles)
     image_blocks = render_images(item, images)
-    intro = intro_paragraph(item, related_articles)
     core = core_summary(item, related_articles)
     interest = interest_paragraph(item, related_articles)
     public_reaction = public_reaction_paragraph(item, related_articles)
@@ -508,8 +494,11 @@ def render_html(item: dict, tags: list[str], related_articles: list[dict] | None
     .news-image img {{
       border-radius: 8px;
       display: block;
-      height: auto;
+      height: 420px;
       max-width: 100%;
+      object-fit: cover;
+      object-position: center;
+      width: 100%;
     }}
     .news-image figcaption {{
       color: #666;
@@ -535,40 +524,22 @@ def render_html(item: dict, tags: list[str], related_articles: list[dict] | None
   <article>
     <h1>{escape(title)}</h1>
     <p class="lead">{escape(summary)}</p>
-
-    <section>
-      <h2>한눈에 보는 주요 이슈</h2>
-      <ul>
-        <li><a href="#issue-1">도입부</a></li>
-        <li><a href="#issue-2">이슈 핵심 정리</a></li>
-        <li><a href="#issue-3">왜 사람들이 보는지</a></li>
-        <li><a href="#issue-4">대중 반응 정리</a></li>
-        <li><a href="#issue-5">개인적인 해석</a></li>
-        <li><a href="#issue-6">마무리</a></li>
-      </ul>
-    </section>
+{image_blocks["intro"]}
 
     <section id="issue-1">
-      <h2>도입부</h2>
-      <p>{escape(intro)}</p>
-      <p>제목만 보면 살짝 센 이야기처럼 느껴질 수 있는데요. 막상 뜯어보면 그렇게 복잡한 내용은 아닙니다. 편하게 읽을 수 있게 핵심만 정리해볼게요.</p>
-{image_blocks["intro"]}
-    </section>
-
-    <section id="issue-2">
       <h2>이슈 핵심 정리</h2>
       <p>{escape(core)}</p>
       <p>길게 설명할 필요 없이, 이번 글은 '{escape(lead_entity(item))}'라는 키워드로 보면 가장 쉽게 잡힙니다. 누가 무슨 말을 했고, 왜 그 말이 기사로 이어졌는지만 보면 됩니다.</p>
 {image_blocks["core"]}
     </section>
 
-    <section id="issue-3">
+    <section id="issue-2">
       <h2>왜 사람들이 보는지</h2>
       <p>{escape(interest)}</p>
       <p>연예 이슈는 인물명 하나만으로 소비되기도 하지만, 실제로는 방송 장면, 발언 맥락, 팬들의 기존 기대감이 함께 얽히는 경우가 많습니다.</p>
     </section>
 
-    <section id="issue-4">
+    <section id="issue-3">
       <h2>대중 반응 정리</h2>
       <p>{escape(public_reaction)}</p>
       <p>비슷한 내용으로 함께 확인한 기사도 아래에 남겨둡니다. 제목만 훑어봐도 어떤 포인트가 반복됐는지 감이 옵니다.</p>
@@ -576,13 +547,13 @@ def render_html(item: dict, tags: list[str], related_articles: list[dict] | None
 {image_blocks["reaction"]}
     </section>
 
-    <section id="issue-5">
+    <section id="issue-4">
       <h2>개인적인 해석</h2>
       <p>{escape(interpretation)}</p>
       <p>이런 이야기는 너무 진지하게 몰고 가면 오히려 어색해집니다. 지금 나온 내용만 보면, 그냥 가볍게 보고 지나갈 수 있는 연예 이슈에 더 가깝습니다.</p>
     </section>
 
-    <section id="issue-6">
+    <section id="issue-5">
       <h2>마무리</h2>
       <p>{escape(closing)}</p>
       <p>혹시 뒤이어 새로운 말이 나오면 그때 다시 보면 됩니다. 지금은 제목만 보고 너무 크게 받아들이기보다, 이런 이야기가 나왔구나 정도로 정리하면 충분해 보입니다.</p>
