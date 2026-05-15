@@ -69,6 +69,39 @@ drafts/YYYY-MM-DD/HH/
 docs/company-handoff-tistory-automation.md
 ```
 
+## 티스토리 브라우저 자동 입력
+
+티스토리 Open API는 종료되어 공식 API 발행은 사용하지 않습니다. 로그인된 Chrome으로 글쓰기 화면을 열고 자동 입력합니다.
+
+Chrome에서 아래 메뉴를 한 번 켜야 합니다.
+
+```text
+보기 > 개발자 > Apple Events의 자바스크립트 허용
+```
+
+한 개 글을 글쓰기 화면에 채우기:
+
+```bash
+python3 scripts/publish_tistory_browser.py \
+  --post-dir drafts/YYYY-MM-DD/HH/post-01
+```
+
+임시저장까지 실행:
+
+```bash
+python3 scripts/publish_tistory_browser.py \
+  --post-dir drafts/YYYY-MM-DD/HH/post-01 \
+  --draft-save
+```
+
+5개 배치 임시저장:
+
+```bash
+python3 scripts/publish_tistory_browser.py \
+  --manifest drafts/YYYY-MM-DD/HH/manifest.json \
+  --draft-save
+```
+
 ## 뉴스 수집
 
 ```bash

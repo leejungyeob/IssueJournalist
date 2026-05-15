@@ -23,6 +23,8 @@
   ],
   "browser_publish": {
     "enabled": false,
+    "driver": "chrome_applescript",
+    "blog_host": "goods99.tistory.com",
     "first_step": "draft_save"
   }
 }

@@ -114,6 +114,26 @@ def append_issued_log(items: list[dict], manifest_path: Path) -> None:
             )
 
 
+def maybe_browser_publish(config: dict, manifest_path: Path) -> None:
+    browser_config = config.get("browser_publish") or {}
+    publish_mode = config.get("publish_mode", "manual_copy")
+    if not browser_config.get("enabled") and publish_mode == "manual_copy":
+        return
+    if publish_mode == "browser_publish":
+        raise SystemExit("browser_publish is not enabled yet. Use browser_draft first.")
+    blog_host = browser_config.get("blog_host")
+    args = [
+        sys.executable,
+        "scripts/publish_tistory_browser.py",
+        "--manifest",
+        str(manifest_path),
+        "--draft-save",
+    ]
+    if blog_host:
+        args.extend(["--blog-host", str(blog_host)])
+    run_command(args)
+
+
 def run_batch(config: dict, output_dir: Path, record_history: bool) -> int:
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -248,6 +268,7 @@ def run_batch(config: dict, output_dir: Path, record_history: bool) -> int:
 
     manifest_path = output_dir / "manifest.json"
     manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    maybe_browser_publish(config, manifest_path)
     if record_history:
         append_issued_log(selected_items, manifest_path)
     print(f"OK: hourly Tistory batch created: {manifest_path}")

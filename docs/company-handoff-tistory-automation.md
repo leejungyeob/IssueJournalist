@@ -25,7 +25,7 @@
 07, 08, 09, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 00, 01, 02
 ```
 
-현재 코드는 `시간당 5개 개별글 생성`까지 된다. 티스토리 브라우저 자동 입력/임시저장/발행은 아직 구현 전이다.
+현재 코드는 `시간당 5개 개별글 생성`과 로그인된 Chrome 기반 티스토리 글쓰기 자동 입력까지 된다. 자동 발행은 아직 켜지지 않았고, 최초 검증은 `임시저장` 1개부터 진행한다.
 
 현재 시간당 글 선택 방식:
 
@@ -41,7 +41,7 @@
 3. 최초에는 자동 `임시저장`, 안정화 후 자동 `발행`
 4. 스케줄러 등록
 
-주의: 티스토리 Open API는 종료 공지가 있으므로 공식 API 발행이 아니라 브라우저 자동화 기준으로 구현한다.
+주의: 티스토리 Open API는 종료 공지가 있으므로 공식 API 발행이 아니라 브라우저 자동화 기준으로 구현한다. 현재 방식은 `scripts/publish_tistory_browser.py`가 로그인된 Chrome에서 티스토리 글쓰기 화면을 열고 제목/본문/태그를 입력한다.
 
 설정 파일:
 
@@ -60,6 +60,18 @@ git pull origin main
 현재 티스토리 초안 생성에는 별도 API 키가 필요하지 않다.
 
 `.env`는 Git에서 제외되어 있으며, 이후 티스토리 브라우저 자동화에 필요한 로컬 값이 생기면 개인 환경에서만 관리한다.
+
+브라우저 자동화는 Chrome 로그인 세션을 사용한다. 현재 블로그 주소는 `goods99.tistory.com`이며, 필요하면 `.env`에 아래처럼 override한다.
+
+```bash
+TISTORY_BLOG_HOST=goods99.tistory.com
+```
+
+Chrome에서 AppleScript JavaScript 실행이 꺼져 있으면 아래 메뉴를 한 번 켠다.
+
+```text
+보기 > 개발자 > Apple Events의 자바스크립트 허용
+```
 
 ## 3. 사전 확인
 
@@ -148,6 +160,36 @@ drafts/YYYY-MM-DD/HH/
 
 개별글마다 폴더를 분리한다.
 
+## 4-2. 티스토리 브라우저 자동 입력
+
+글쓰기 화면에 한 개 글을 채워 넣기만 할 때:
+
+```bash
+python3 scripts/publish_tistory_browser.py \
+  --blog-host goods99.tistory.com \
+  --post-dir drafts/YYYY-MM-DD/HH/post-01
+```
+
+임시저장까지 누를 때:
+
+```bash
+python3 scripts/publish_tistory_browser.py \
+  --blog-host goods99.tistory.com \
+  --post-dir drafts/YYYY-MM-DD/HH/post-01 \
+  --draft-save
+```
+
+시간당 배치 5개를 순서대로 임시저장할 때:
+
+```bash
+python3 scripts/publish_tistory_browser.py \
+  --blog-host goods99.tistory.com \
+  --manifest drafts/YYYY-MM-DD/HH/manifest.json \
+  --draft-save
+```
+
+처음 검증은 반드시 `--limit 1 --draft-save`로 한 개만 저장한다.
+
 ## 5. 현재 설정
 
 ```json
@@ -167,8 +209,8 @@ drafts/YYYY-MM-DD/HH/
 
 1. 시간당 5개 생성물로 티스토리 수동 게시 흐름을 한 번 검증한다.
 2. `tistory-ready.html` 품질을 높인다.
-3. 티스토리 글쓰기 화면 브라우저 자동화 스크립트를 만든다.
-4. 처음에는 `임시저장`까지만 자동화한다.
+3. 티스토리 글쓰기 화면 브라우저 자동화 스크립트로 `post-01` 임시저장 테스트를 한다.
+4. 5개 일괄 임시저장을 검증한다.
 5. 안정화되면 `발행` 버튼 자동화로 확장한다.
 
 ## 7. 주의
