@@ -5,21 +5,19 @@ import argparse
 import email.utils
 import html
 import json
-import os
 import re
 import ssl
 import sys
 import urllib.error
 import urllib.parse
 import urllib.request
+import xml.etree.ElementTree as ET
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
 
-ROOT = Path(__file__).resolve().parents[1]
-ENV_PATH = ROOT / ".env"
 KST = ZoneInfo("Asia/Seoul")
 CERT_PATHS = [
     Path("/etc/ssl/cert.pem"),
@@ -27,6 +25,7 @@ CERT_PATHS = [
 ]
 
 DEFAULT_QUERIES = ["연예", "아이돌", "배우", "드라마", "예능", "K팝", "컴백", "시청률"]
+RSS_ENDPOINT = "https://news.google.com/rss/search"
 IMPORTANT_KEYWORDS = [
     "공식",
     "단독",
@@ -92,12 +91,12 @@ class NewsItem:
     title: str
     description: str
     url: str
-    naver_url: str
     domain: str
     pub_date: str
     pub_date_kst: str
     source_query: str
     source_queries: list[str]
+    source_name: str
     score: float
     interest_score: float
     cluster_size: int
@@ -107,27 +106,11 @@ class NewsItem:
     safety_flags: list[str]
 
 
-def load_dotenv(path: Path) -> None:
-    if not path.exists():
-        return
-
-    for raw_line in path.read_text(encoding="utf-8").splitlines():
-        line = raw_line.strip()
-        if not line or line.startswith("#") or "=" not in line:
-            continue
-
-        key, value = line.split("=", 1)
-        key = key.strip()
-        value = value.strip().strip("\"'")
-        if key and key not in os.environ:
-            os.environ[key] = value
-
-
-def require_env(name: str) -> str:
-    value = os.environ.get(name, "").strip()
-    if not value:
-        raise RuntimeError(f"{name} is missing. Fill it in {ENV_PATH}.")
-    return value
+def ssl_context() -> ssl.SSLContext:
+    for path in CERT_PATHS:
+        if path.exists():
+            return ssl.create_default_context(cafile=str(path))
+    return ssl.create_default_context()
 
 
 def clean_text(value: str) -> str:
@@ -135,6 +118,13 @@ def clean_text(value: str) -> str:
     value = re.sub(r"</?b>", "", value)
     value = re.sub(r"<[^>]+>", "", value)
     return re.sub(r"\s+", " ", value).strip()
+
+
+def clean_title(value: str, source_name: str) -> str:
+    title = clean_text(value)
+    if source_name and title.endswith(f" - {source_name}"):
+        title = title[: -len(f" - {source_name}")].strip()
+    return title
 
 
 def normalize_title(value: str) -> str:
@@ -154,13 +144,6 @@ def parse_pub_date(value: str) -> datetime:
 def domain_from_url(value: str) -> str:
     parsed = urllib.parse.urlparse(value)
     return parsed.netloc.removeprefix("www.")
-
-
-def ssl_context() -> ssl.SSLContext:
-    for path in CERT_PATHS:
-        if path.exists():
-            return ssl.create_default_context(cafile=str(path))
-    return ssl.create_default_context()
 
 
 def keyword_hits(text: str, keywords: list[str]) -> list[str]:
@@ -211,36 +194,57 @@ def score_item(
     return round(score, 3), round(interest_score, 3)
 
 
-def fetch_news(query: str, display: int, client_id: str, client_secret: str) -> list[dict]:
+def rss_url(query: str) -> str:
     params = urllib.parse.urlencode(
         {
-            "query": query,
-            "display": display,
-            "start": 1,
-            "sort": "date",
+            "q": query,
+            "hl": "ko",
+            "gl": "KR",
+            "ceid": "KR:ko",
         }
     )
-    url = f"https://openapi.naver.com/v1/search/news.json?{params}"
-    request = urllib.request.Request(url)
-    request.add_header("X-Naver-Client-Id", client_id)
-    request.add_header("X-Naver-Client-Secret", client_secret)
+    return f"{RSS_ENDPOINT}?{params}"
 
+
+def fetch_rss(query: str) -> list[dict]:
+    request = urllib.request.Request(
+        rss_url(query),
+        headers={"User-Agent": "IssueJournalist/1.0 (+https://github.com/leejungyeob/IssueJournalist)"},
+    )
     with urllib.request.urlopen(request, timeout=15, context=ssl_context()) as response:
-        payload = json.loads(response.read().decode("utf-8"))
-    return payload.get("items", [])
+        root = ET.fromstring(response.read())
+
+    items: list[dict] = []
+    for item in root.findall("./channel/item"):
+        source = item.find("source")
+        source_name = clean_text(source.text if source is not None else "")
+        source_url = source.attrib.get("url", "") if source is not None else ""
+        title = clean_title(item.findtext("title", ""), source_name)
+        link = clean_text(item.findtext("link", ""))
+        description = clean_text(item.findtext("description", ""))
+        pub_date = clean_text(item.findtext("pubDate", ""))
+        if not title or not link or not pub_date:
+            continue
+        items.append(
+            {
+                "title": title,
+                "description": description,
+                "url": link,
+                "domain": domain_from_url(source_url or link) or source_name or "source",
+                "source_name": source_name or domain_from_url(source_url or link) or "source",
+                "pub_date": pub_date,
+            }
+        )
+    return items
 
 
 def collect_news(queries: list[str], display: int, limit: int) -> dict:
-    load_dotenv(ENV_PATH)
-    client_id = require_env("NAVER_CLIENT_ID")
-    client_secret = require_env("NAVER_CLIENT_SECRET")
-
     candidates_by_url: dict[str, dict] = {}
     errors: list[dict[str, str]] = []
 
     for query in queries:
         try:
-            raw_items = fetch_news(query, display, client_id, client_secret)
+            raw_items = fetch_rss(query)[:display]
         except urllib.error.HTTPError as exc:
             errors.append({"query": query, "error": f"HTTP {exc.code}: {exc.reason}"})
             continue
@@ -251,9 +255,8 @@ def collect_news(queries: list[str], display: int, limit: int) -> dict:
         for raw in raw_items:
             title = clean_text(raw.get("title", ""))
             description = clean_text(raw.get("description", ""))
-            url = raw.get("originallink") or raw.get("link") or ""
-            naver_url = raw.get("link") or url
-            pub_date = raw.get("pubDate", "")
+            url = raw.get("url") or ""
+            pub_date = raw.get("pub_date", "")
             if not title or not url or not pub_date:
                 continue
 
@@ -267,8 +270,8 @@ def collect_news(queries: list[str], display: int, limit: int) -> dict:
                 "title": title,
                 "description": description,
                 "url": url,
-                "naver_url": naver_url,
-                "domain": domain_from_url(url),
+                "domain": raw.get("domain") or domain_from_url(url),
+                "source_name": raw.get("source_name") or raw.get("domain") or domain_from_url(url),
                 "pub_date": pub_date,
                 "pub_date_kst": pub_dt.isoformat(),
                 "pub_dt": pub_dt,
@@ -339,12 +342,12 @@ def collect_news(queries: list[str], display: int, limit: int) -> dict:
                 title=candidate["title"],
                 description=candidate["description"],
                 url=candidate["url"],
-                naver_url=candidate["naver_url"],
                 domain=candidate["domain"],
                 pub_date=candidate["pub_date"],
                 pub_date_kst=candidate["pub_date_kst"],
                 source_query=candidate["source_query"],
                 source_queries=merged_queries,
+                source_name=candidate["source_name"],
                 score=score,
                 interest_score=interest_score,
                 cluster_size=cluster_size,
@@ -360,6 +363,7 @@ def collect_news(queries: list[str], display: int, limit: int) -> dict:
     return {
         "generated_at": generated_at,
         "timezone": "Asia/Seoul",
+        "source": "rss",
         "queries": queries,
         "display_per_query": display,
         "candidate_count": len(candidates_by_url),
@@ -372,28 +376,26 @@ def collect_news(queries: list[str], display: int, limit: int) -> dict:
 
 def parse_queries(raw: str | None) -> list[str]:
     if not raw:
-        raw = os.environ.get("NEWS_QUERIES", "")
-    if not raw:
         return DEFAULT_QUERIES
     return [part.strip() for part in raw.split(",") if part.strip()]
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Collect recent entertainment news from Naver Search API.")
+    parser = argparse.ArgumentParser(description="Collect recent entertainment news from public RSS feeds.")
     parser.add_argument("--queries", help="Comma-separated query terms. Defaults to entertainment-related terms.")
-    parser.add_argument("--display", type=int, default=20, help="Naver results per query, 1-100.")
+    parser.add_argument("--display", type=int, default=20, help="RSS items per query.")
     parser.add_argument("--limit", type=int, default=12, help="Maximum selected items to output.")
     parser.add_argument("--output", type=Path, help="Optional JSON output path.")
     args = parser.parse_args()
 
-    if not 1 <= args.display <= 100:
-        print("--display must be between 1 and 100.", file=sys.stderr)
+    if args.display < 1:
+        print("--display must be at least 1.", file=sys.stderr)
         return 2
 
-    try:
-        payload = collect_news(parse_queries(args.queries), args.display, args.limit)
-    except Exception as exc:
-        print(str(exc), file=sys.stderr)
+    payload = collect_news(parse_queries(args.queries), args.display, args.limit)
+    if payload["errors"] and not payload["items"]:
+        for error in payload["errors"]:
+            print(f"ERROR: {error['query']}: {error['error']}", file=sys.stderr)
         return 1
 
     rendered = json.dumps(payload, ensure_ascii=False, indent=2)

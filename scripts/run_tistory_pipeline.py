@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import shutil
 import subprocess
 import sys
@@ -13,7 +12,6 @@ from zoneinfo import ZoneInfo
 
 
 ROOT = Path(__file__).resolve().parents[1]
-ENV_PATH = ROOT / ".env"
 DEFAULT_CONFIG = ROOT / "config" / "tistory-automation.json"
 KST = ZoneInfo("Asia/Seoul")
 
@@ -24,27 +22,6 @@ REQUIRED_SCRIPTS = [
     "scripts/check_tistory_ready_html.py",
 ]
 
-REQUIRED_ENV = [
-    "NAVER_CLIENT_ID",
-    "NAVER_CLIENT_SECRET",
-]
-
-
-def load_dotenv(path: Path) -> None:
-    if not path.exists():
-        return
-
-    for raw_line in path.read_text(encoding="utf-8").splitlines():
-        line = raw_line.strip()
-        if not line or line.startswith("#") or "=" not in line:
-            continue
-        key, value = line.split("=", 1)
-        key = key.strip()
-        value = value.strip().strip("\"'")
-        if key and key not in os.environ:
-            os.environ[key] = value
-
-
 def load_config(path: Path) -> dict:
     try:
         return json.loads(path.read_text(encoding="utf-8"))
@@ -52,10 +29,6 @@ def load_config(path: Path) -> dict:
         raise RuntimeError(f"config not found: {path}") from exc
     except json.JSONDecodeError as exc:
         raise RuntimeError(f"invalid config JSON: {path}: {exc}") from exc
-
-
-def missing_env() -> list[str]:
-    return [name for name in REQUIRED_ENV if not os.environ.get(name, "").strip()]
 
 
 def missing_scripts() -> list[str]:
@@ -69,10 +42,6 @@ def preflight(config: dict) -> int:
         errors.append(f"target must be tistory, got {config.get('target')!r}")
     if config.get("publish_mode") not in {"manual_copy", "browser_draft", "browser_publish"}:
         errors.append(f"unsupported publish_mode: {config.get('publish_mode')!r}")
-
-    env_missing = missing_env()
-    if env_missing:
-        errors.append(f"missing env: {', '.join(env_missing)}")
 
     scripts_missing = missing_scripts()
     if scripts_missing:
@@ -174,7 +143,6 @@ def main() -> int:
     parser.add_argument("--preflight", action="store_true", help="Only check config, env, and required scripts.")
     args = parser.parse_args()
 
-    load_dotenv(ENV_PATH)
     try:
         config = load_config(args.config)
     except Exception as exc:
