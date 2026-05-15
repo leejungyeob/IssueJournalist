@@ -97,7 +97,7 @@ python3 scripts/render_tistory_seed_draft.py logs/latest-entertainment-news.json
 
 `post-title.txt`에는 실제 사용할 1순위 제목이 들어가고, `post-title-candidates.txt`에는 같은 글에 쓸 수 있는 제목 후보 3개가 들어갑니다.
 
-본문은 기사 문장을 그대로 옮기지 않고 `도입부`, `이슈 핵심 정리`, `왜 사람들이 보는지`, `대중 반응 정리`, `개인적인 해석`, `마무리` 흐름으로 렌더링합니다. 이미지는 뉴스 사진을 무단 삽입하지 않고, 공식 이미지·소속사 제공 이미지·방송사 제공 이미지·본인 SNS 임베드처럼 합법적으로 확인할 수 있는 자료를 넣을 위치와 alt/caption 추천만 남깁니다.
+본문은 기사 문장을 그대로 옮기지 않고 `도입부`, `이슈 핵심 정리`, `왜 사람들이 보는지`, `대중 반응 정리`, `개인적인 해석`, `마무리` 흐름으로 렌더링합니다. 이미지는 수집/보강 단계에서 찾은 이미지 후보를 실제 본문 이미지로 넣고, 캡션에 이미지 출처 링크를 함께 남깁니다.
 
 `drafts/`는 자동 생성 산출물이므로 Git에서 제외됩니다.
 
@@ -115,7 +115,7 @@ python3 scripts/check_tistory_ready_html.py drafts/YYYY-MM-DD/tistory-ready.html
 
 - 내부 분석/검수 문구가 본문에 남아 있지 않은지 확인합니다.
 - 제목 길이, `meta description`, `h1` 개수, 목차 링크, 이슈 섹션, 출처 박스 구조를 확인합니다.
-- 이미지 삽입 추천 블록이 2~4개인지 확인합니다.
+- 본문 이미지가 1~4개인지 확인합니다.
 - 티스토리 태그가 정확히 10개인지 확인합니다.
 
 ## 대표이미지 생성
@@ -145,4 +145,4 @@ drafts/
     seed.html           # 자동화가 참고하는 수집 기반 뼈대
 ```
 
-사용자가 실제로 사용할 파일은 `post-title.txt`, `post-title-candidates.txt`, `post-tags.txt`, `cover.png`, `tistory-ready.html`입니다. `tistory-ready.html`은 독자에게 바로 보이는 게시글 문장과 이미지 삽입 추천만 포함해야 하며, 자동화 운영 메모나 작성자 지시문을 넣지 않습니다.
+사용자가 실제로 사용할 파일은 `post-title.txt`, `post-title-candidates.txt`, `post-tags.txt`, `cover.png`, `tistory-ready.html`입니다. `tistory-ready.html`은 독자에게 바로 보이는 게시글 문장과 실제 본문 이미지만 포함해야 하며, 자동화 운영 메모나 작성자 지시문을 넣지 않습니다.

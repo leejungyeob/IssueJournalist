@@ -44,7 +44,7 @@ class TistoryHTMLParser(HTMLParser):
         self.issue_sections = 0
         self.toc_links = 0
         self.source_bookmarks = 0
-        self.image_recommendations = 0
+        self.news_images = 0
         self._in_title = False
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
@@ -65,8 +65,8 @@ class TistoryHTMLParser(HTMLParser):
             self.toc_links += 1
         elif "source-bookmark" in attr_map.get("class", "").split():
             self.source_bookmarks += 1
-        elif "image-recommendation" in attr_map.get("class", "").split():
-            self.image_recommendations += 1
+        elif tag == "img":
+            self.news_images += 1
 
     def handle_endtag(self, tag: str) -> None:
         if tag == "title":
@@ -124,8 +124,8 @@ def main() -> int:
         errors.append(f"toc link count {parsed.toc_links} does not match issue section count {parsed.issue_sections}")
     if parsed.source_bookmarks < 1:
         errors.append("missing source bookmark")
-    if not 2 <= parsed.image_recommendations <= 4:
-        errors.append(f"expected 2-4 image recommendations, found {parsed.image_recommendations}")
+    if not 1 <= parsed.news_images <= 4:
+        errors.append(f"expected 1-4 article images, found {parsed.news_images}")
 
     tags = tag_count(args.tags_file)
     if tags is not None and tags != 10:
@@ -139,7 +139,7 @@ def main() -> int:
     print(
         "OK: publish-ready checks passed "
         f"(h1=1, issues={parsed.issue_sections}, toc={parsed.toc_links}, "
-        f"bookmarks={parsed.source_bookmarks}, images={parsed.image_recommendations})"
+        f"bookmarks={parsed.source_bookmarks}, images={parsed.news_images})"
     )
     return 0
 

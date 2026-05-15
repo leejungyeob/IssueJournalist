@@ -99,7 +99,7 @@ drafts/YYYY-MM-DD/
 - `post-title-candidates.txt`: 제목 후보 3개
 - `post-tags.txt`: 태그
 - `cover.png`: 대표이미지
-- `tistory-ready.html`: 본문 HTML. 기사 복붙형 문장 대신 블로그식 정리 흐름으로 작성되며, 본문 중간에 공식 이미지/SNS 임베드/방송사 제공 이미지 위주의 삽입 추천 블록이 들어간다.
+- `tistory-ready.html`: 본문 HTML. 기사 복붙형 문장 대신 블로그식 정리 흐름으로 작성되며, 본문 중간에 수집/보강 단계에서 찾은 실제 이미지와 이미지 출처 캡션이 들어간다.
 
 ## 4-1. 시간당 5개 개별글 생성
 

@@ -216,12 +216,20 @@ def title_candidates(item: dict) -> list[str]:
     title = clean_text(item.get("title", ""))
     secondary = next((term for term in terms if term != entity), "")
     sensitive_title = any(keyword in title for keyword in ["루머", "의혹", "논란", "폭로", "사생활", "혐의"])
+    has_couple_story = any(term in title or term in terms for term in ["부부싸움", "목격담", "고우림"])
+    partner = "고우림" if "고우림" in title or "고우림" in terms else secondary
 
     if sensitive_title:
         candidates = [
             f"{entity} 루머성 보도 정리, 확인된 내용만 보기",
             f"{entity} 관련 이야기, 단정 없이 차분히 정리",
             f"{entity} 이슈 흐름, 지금 나온 기사만 기준으로",
+        ]
+    elif has_couple_story and partner:
+        candidates = [
+            f"{entity} {partner} 부부 이야기, 예능에서 나온 한마디",
+            f"{entity} {partner} 목격담, 너무 크게 볼 일은 아닌 이유",
+            f"{entity} {partner} 관련 소식, 가볍게 정리해봄",
         ]
     elif "컴백" in title or "컴백" in (item.get("important_keywords") or []):
         candidates = [
@@ -250,64 +258,60 @@ def blog_title(item: dict) -> str:
 
 def blog_summary(item: dict, related_articles: list[dict]) -> str:
     entity = lead_entity(item)
-    source_name = clean_text(item.get("source_name") or item.get("domain") or "원문")
     related_count = len(related_articles)
     if related_count:
         return (
-            f"{entity} 관련 이야기가 {source_name} 보도 이후 여러 매체에서 이어졌습니다. "
-            f"제목만 빠르게 훑기보다, 같이 나온 기사 {related_count}건을 묶어 보면 어떤 부분에서 말이 나왔는지 조금 더 선명하게 보입니다."
+            f"{entity} 이야기가 예능과 연예 기사 흐름 안에서 다시 언급됐습니다. "
+            f"제목만 보면 꽤 크게 느껴질 수 있지만, 함께 나온 기사 {related_count}건을 같이 보면 핵심은 조금 더 단순합니다."
         )
     return (
-        f"{entity} 관련 새 보도가 올라왔습니다. 이번 글에서는 기사 제목의 자극적인 표현을 그대로 따라가기보다, "
-        "확인된 내용과 독자가 궁금해할 만한 포인트를 중심으로 정리했습니다. 원문 보도는 하단 북마크에서 따로 확인할 수 있습니다."
+        f"{entity} 관련 이야기가 새로 올라왔습니다. 제목만 보면 조금 강하게 느껴질 수 있어서, "
+        "본문에서는 핵심 내용과 자연스럽게 읽을 만한 포인트만 추려봤습니다."
     )
 
 
 def intro_paragraph(item: dict, related_articles: list[dict]) -> str:
     entity = lead_entity(item)
-    source_name = clean_text(item.get("source_name") or item.get("domain") or "원문")
     if related_articles:
         return (
-            f"{entity} 관련 기사가 여러 곳에서 이어졌습니다. 처음엔 그냥 지나칠 수 있는 연예 소식처럼 보이지만, "
-            f"{source_name} 보도와 함께 나온 보조 기사들을 보면 사람들이 어떤 지점을 궁금해했는지 어느 정도 드러납니다."
+            f"{entity} 이야기가 다시 눈에 들어왔습니다. 처음엔 그냥 가벼운 연예 소식처럼 보였는데, "
+            "비슷한 제목의 기사들이 이어진 걸 보면 사람들이 궁금해하는 지점이 분명히 있었습니다."
         )
     return (
-        f"{entity} 관련 보도가 새로 나왔습니다. 아직 같은 키워드의 후속 기사가 많지는 않아서, "
-        "지금은 원문에 나온 내용과 제목에서 반복되는 포인트를 중심으로 보는 편이 좋겠습니다."
+        f"{entity} 관련 이야기가 하나 올라왔습니다. 아직 크게 번진 이슈라기보다는, "
+        "지금 나온 내용만 가볍게 확인해도 충분한 소식에 가깝습니다."
     )
 
 
 def core_summary(item: dict, related_articles: list[dict]) -> str:
     entity = lead_entity(item)
     particle = object_particle(entity)
-    source_name = clean_text(item.get("source_name") or item.get("domain") or "원문")
-    pub_date = format_date(item.get("pub_date_kst", ""))
-    related_sources = []
-    for article in related_articles:
-        name = clean_text(article.get("source_name") or article.get("domain") or "")
-        if name and name not in related_sources:
-            related_sources.append(name)
-    source_text = ", ".join(related_sources[:3])
-    if source_text:
+    title = clean_text(item.get("title", ""))
+    if "부부싸움" in title or "목격담" in title:
         return (
-            f"{pub_date} 기준으로 확인한 출발점은 {source_name} 보도입니다. 이후 {source_text} 등에서도 비슷한 키워드가 보였고, "
-            f"공통으로 남는 축은 {entity}{particle} 둘러싼 최근 이야기와 그에 대한 후속 해석입니다."
+            f"이번 이야기는 {entity}{particle} 둘러싼 일상적인 에피소드가 예능 맥락에서 언급되며 나온 흐름입니다. "
+            "제목만 보면 크게 느껴질 수 있지만, 실제로는 방송에서 나온 짧은 말과 주변 반응이 기사로 이어진 쪽에 가깝습니다."
         )
-    return f"{pub_date} 기준으로 확인한 내용은 {source_name} 보도가 중심입니다. 핵심은 {entity}{particle} 둘러싼 최근 이야기입니다."
+    if item.get("safety_flags"):
+        return (
+            f"이번 이야기는 {entity}{particle} 둘러싼 민감한 표현이 제목에 섞여 있습니다. "
+            "그래서 사실처럼 단정하기보다는, 지금 나온 내용과 반복되는 키워드만 분리해서 보는 편이 좋습니다."
+        )
+    return (
+        f"핵심은 {entity}{particle} 둘러싼 최근 이야기입니다. 제목에 여러 단어가 붙어 있지만, "
+        "길게 풀어보면 인물과 상황, 그리고 그걸 바라보는 독자들의 궁금증으로 정리됩니다."
+    )
 
 
 def interest_paragraph(item: dict, related_articles: list[dict]) -> str:
     terms = keyword_terms(item)
     term_text = ", ".join(terms[:4])
     if related_articles:
-        source_count = len(
-            {clean_text(article.get("source_name") or article.get("domain") or "") for article in related_articles}
-        )
         return (
-            f"눈에 띄는 키워드는 {term_text}입니다. 같은 키워드로 확인한 보조 기사가 {len(related_articles)}건, "
-            f"출처 기준으로는 {source_count}곳입니다. 한 기사만 보면 자극적인 문장만 남기 쉬운데, 여러 제목을 같이 보면 반복되는 포인트가 조금 정리됩니다."
+            f"사람들이 눌러볼 만한 포인트는 {term_text} 쪽입니다. 특히 이름만 보고 들어왔다가도, "
+            "막상 읽다 보면 실제로 어떤 상황에서 나온 말인지 궁금해지는 식입니다."
         )
-    return f"눈에 띄는 키워드는 {term_text}입니다. 아직 보조 기사는 많지 않지만, 이 조합이 이번 글을 이해하는 가장 빠른 단서입니다."
+    return f"사람들이 눌러볼 만한 포인트는 {term_text} 쪽입니다. 아직 큰 흐름은 아니지만, 이 조합만으로도 궁금증은 생깁니다."
 
 
 def public_reaction_paragraph(item: dict, related_articles: list[dict]) -> str:
@@ -315,12 +319,11 @@ def public_reaction_paragraph(item: dict, related_articles: list[dict]) -> str:
     terms = keyword_terms(item)
     if related_articles:
         return (
-            f"댓글이나 커뮤니티 반응을 직접 확인한 것은 아니기 때문에 대중 반응을 단정하긴 어렵습니다. 다만 보조 기사들이 "
-            f"{', '.join(terms[:3])} 같은 단어를 반복해서 다룬 걸 보면, 독자들이 {entity} 자체보다 그 주변 맥락을 더 궁금해한 것으로 보입니다."
+            f"반응을 단정해서 말하긴 어렵지만, {', '.join(terms[:3])} 같은 단어가 반복되는 걸 보면 "
+            f"사람들은 {entity} 자체보다 그 말이 나온 배경을 더 궁금해하는 분위기입니다."
         )
     return (
-        f"아직 반응을 넓게 묶어 말할 단계는 아닙니다. 지금은 {entity}라는 이름과 함께 나온 핵심 키워드가 먼저 소비되고, "
-        "이후 추가 보도나 본인·소속사 입장이 나오면 분위기가 달라질 수 있습니다."
+        f"아직 반응을 넓게 묶어 말할 정도는 아닙니다. 지금은 {entity}라는 이름과 핵심 키워드가 먼저 소비되는 단계로 보입니다."
     )
 
 
@@ -328,17 +331,17 @@ def personal_interpretation(item: dict, related_articles: list[dict]) -> str:
     entity = lead_entity(item)
     if item.get("safety_flags"):
         return (
-            f"개인적으로는 이런 종류의 {entity} 이야기는 속도보다 확인이 먼저라고 봅니다. 제목이 강하게 보일수록 "
-            "본문에서 실제로 확인된 내용과 추측에 가까운 표현을 나눠 읽는 게 필요합니다."
+            f"개인적으로는 이런 종류의 {entity} 이야기는 조금 천천히 보는 게 좋다고 생각합니다. "
+            "제목이 강하게 보일수록 실제 내용과 추측처럼 보이는 표현을 나눠 읽어야 합니다."
         )
     if related_articles:
         return (
-            f"개인적으로는 이번 흐름이 단순한 단발 기사라기보다, 같은 키워드를 여러 매체가 조금씩 다른 각도로 풀어낸 사례처럼 보입니다. "
-            "그래서 원문 한 줄을 그대로 따라가기보다는 반복해서 등장하는 단서만 남기는 쪽이 더 읽기 편합니다."
+            "개인적으로는 이런 이야기가 너무 크게 소비될 필요는 없다고 봅니다. "
+            "다만 익숙한 이름과 생활감 있는 에피소드가 만나면, 가볍게 읽히는 연예 이슈가 되는 건 자연스러운 흐름입니다."
         )
     return (
-        f"개인적으로는 아직 크게 단정할 만한 내용보다는 가볍게 체크할 소식에 가깝다고 봅니다. "
-        f"{entity} 관련 후속 기사나 공식 채널 업데이트가 있으면 그때 다시 정리해도 늦지 않습니다."
+        "개인적으로는 아직 크게 의미를 붙이기보다는 가볍게 체크할 소식에 가깝다고 봅니다. "
+        "후속 내용이 나오면 그때 맥락을 다시 보면 됩니다."
     )
 
 
@@ -346,15 +349,15 @@ def closing_paragraph(item: dict, related_articles: list[dict]) -> str:
     entity = lead_entity(item)
     if item.get("safety_flags"):
         return (
-            f"{entity} 관련 내용은 민감하게 해석될 수 있는 표현이 섞일 수 있어 단정적으로 받아들이기보다 "
-            "원문 보도와 추가 입장을 함께 확인하는 편이 좋겠습니다. 새 보도가 나오면 사실관계 중심으로 다시 정리할 만합니다."
+            f"{entity} 관련 이야기는 제목만 보고 단정하기보다 조금 차분히 보는 편이 좋겠습니다. "
+            "새로운 내용이 나오면 그때 사실관계를 중심으로 다시 확인하면 됩니다."
         )
     if related_articles:
         return (
-            f"정리하면 {entity} 이야기는 한 기사만 보고 끝낼 내용이라기보다, 여러 매체가 같은 키워드를 따라가며 조금씩 살을 붙인 흐름입니다. "
-            "새로운 발언이나 방송 장면, 공식 입장이 나오면 다시 한 번 읽을 거리가 생길 수 있습니다."
+            f"정리하면 {entity} 이야기는 무겁게 볼 이슈라기보다, 방송이나 일상 에피소드가 기사로 이어진 가벼운 읽을거리 쪽에 가깝습니다. "
+            "다만 제목만 보고 오해하지 않도록 핵심만 보고 넘어가는 게 좋겠습니다."
         )
-    return f"정리하면 {entity} 관련 보도는 현재 확인된 기사 기준으로 가볍게 체크할 만한 소식입니다. 추가 기사나 공식 입장이 나오면 흐름이 달라질 수 있습니다."
+    return f"정리하면 {entity} 관련 이야기는 가볍게 체크할 만한 소식입니다. 아직은 더 크게 해석할 필요는 없어 보입니다."
 
 
 def render_related_articles(articles: list[dict]) -> str:
@@ -372,56 +375,50 @@ def render_related_articles(articles: list[dict]) -> str:
 """.rstrip()
 
 
-def render_fact_box(item: dict) -> str:
-    source_name = clean_text(item.get("source_name") or item.get("domain") or "원문")
-    pub_date = format_date(item.get("pub_date_kst", ""))
+def image_key(image: dict) -> str:
+    url = clean_text(image.get("url", ""))
+    return re.sub(r"[?#].*$", "", url).rsplit("/", 1)[-1] or url
+
+
+def selected_images(images: list[dict], limit: int = 3) -> list[dict]:
+    selected: list[dict] = []
+    seen: set[str] = set()
+    for image in images:
+        url = clean_text(image.get("url", ""))
+        if not url:
+            continue
+        key = image_key(image)
+        if key in seen:
+            continue
+        seen.add(key)
+        selected.append(image)
+        if len(selected) == limit:
+            break
+    return selected
+
+
+def render_image(image: dict, entity: str, caption: str) -> str:
+    source_name = clean_text(image.get("source_name") or "원문")
+    source_url = clean_text(image.get("source_article_url") or "")
     return f"""
-      <div class="fact-box">
-        <strong>확인한 기준</strong>
-        <p>{escape(source_name)} 보도({escape(pub_date)})를 출발점으로 삼고, 같은 키워드의 보조 기사와 이미지 삽입 후보를 함께 확인했습니다.</p>
-      </div>
+      <figure class="news-image">
+        <img src="{escape(image.get("url", ""))}" alt="{escape(entity)} 관련 이미지" loading="lazy">
+        <figcaption>{escape(caption)} <a href="{escape(source_url)}" target="_blank" rel="noopener noreferrer">이미지 출처: {escape(source_name)}</a></figcaption>
+      </figure>
 """.rstrip()
 
 
-def render_image_recommendation(position: str, recommendation: str, alt: str, caption: str) -> str:
-    return f"""
-      <div class="image-recommendation">
-        <strong>[이미지 삽입 추천]</strong>
-        <p><b>위치:</b> {escape(position)}</p>
-        <p><b>추천 이미지:</b> {escape(recommendation)}</p>
-        <p><b>alt 태그:</b> {escape(alt)}</p>
-        <p><b>캡션:</b> {escape(caption)}</p>
-      </div>
-""".rstrip()
-
-
-def render_image_recommendations(item: dict, related_articles: list[dict]) -> dict[str, str]:
+def render_images(item: dict, images: list[dict]) -> dict[str, str]:
     entity = lead_entity(item)
-    has_related = bool(related_articles)
-
-    blocks = {
-        "intro": render_image_recommendation(
-            "도입부 직후",
-            f"{entity} 공식 프로필, 소속사 제공 이미지, 방송사 공식 페이지 이미지, 또는 본인 SNS 임베드",
-            f"{entity} 관련 공식 이미지",
-            f"{entity} 이야기를 시작하기 전에 인물이나 프로그램을 자연스럽게 보여주는 이미지가 좋습니다.",
-        ),
-        "core": render_image_recommendation(
-            "이슈 핵심 정리 이후",
-            f"{entity} 또는 관련 프로그램의 방송사 제공 스틸컷, 공식 유튜브 썸네일, 프로그램 공식 이미지",
-            f"{entity} 관련 핵심 장면 또는 공식 자료",
-            "본문에서 다룬 내용을 한 번 쉬어가며 확인할 수 있는 자료 이미지가 잘 맞습니다.",
-        ),
-    }
-    if has_related:
-        blocks["reaction"] = render_image_recommendation(
-            "대중 반응 정리 부분 근처",
-            f"{entity} 본인 SNS 게시물 임베드, 소속사 공지, 방송사 공식 클립 썸네일 중 합법적으로 사용할 수 있는 자료",
-            f"{entity} 관련 공식 채널 반응 자료",
-            "반응을 단정하지 않기 위해 캡처 이미지보다 원 게시물 임베드나 공식 채널 자료를 우선 확인하세요.",
-        )
-    else:
-        blocks["reaction"] = ""
+    candidates = selected_images(images)
+    blocks = {"intro": "", "core": "", "reaction": ""}
+    captions = [
+        f"{entity} 관련 이야기를 시작하기 전에 분위기를 잡아주는 이미지입니다.",
+        "본문에서 언급한 흐름을 한 번 쉬어가며 볼 수 있는 이미지입니다.",
+        "관련 반응과 함께 보기 좋은 참고 이미지입니다.",
+    ]
+    for slot, image, caption in zip(blocks, candidates, captions):
+        blocks[slot] = render_image(image, entity, caption)
     return blocks
 
 
@@ -431,13 +428,12 @@ def render_html(item: dict, tags: list[str], related_articles: list[dict] | None
     source_name = clean_text(item.get("source_name") or item.get("domain") or "원문")
     domain = clean_text(item.get("domain") or source_name)
     url = escape(item.get("url", ""))
-    pub_date = escape(format_date(item.get("pub_date_kst", "")))
     tag_text = " ".join(f"#{tag}" for tag in tags)
     related_articles = related_articles or []
+    images = images or []
     summary = excerpt(blog_summary(item, related_articles), 150)
     related_block = render_related_articles(related_articles)
-    fact_box = render_fact_box(item)
-    image_recommendations = render_image_recommendations(item, related_articles)
+    image_blocks = render_images(item, images)
     intro = intro_paragraph(item, related_articles)
     core = core_summary(item, related_articles)
     interest = interest_paragraph(item, related_articles)
@@ -485,16 +481,6 @@ def render_html(item: dict, tags: list[str], related_articles: list[dict] | None
       border-left: 4px solid #222;
       padding: 14px 16px;
     }}
-    .fact-box {{
-      background: #fafafa;
-      border: 1px solid #e5e5e5;
-      border-radius: 8px;
-      margin: 18px 0;
-      padding: 14px 16px;
-    }}
-    .fact-box p {{
-      margin: 6px 0 0;
-    }}
     .meta {{
       color: #555;
       font-size: 14px;
@@ -529,17 +515,6 @@ def render_html(item: dict, tags: list[str], related_articles: list[dict] | None
       color: #666;
       font-size: 13px;
       margin-top: 8px;
-    }}
-    .image-recommendation {{
-      background: #f8fafc;
-      border: 1px dashed #94a3b8;
-      border-radius: 8px;
-      color: #334155;
-      margin: 22px 0;
-      padding: 14px 16px;
-    }}
-    .image-recommendation p {{
-      margin: 6px 0;
     }}
     .related-list, .image-candidates {{
       padding-left: 20px;
@@ -576,17 +551,15 @@ def render_html(item: dict, tags: list[str], related_articles: list[dict] | None
     <section id="issue-1">
       <h2>도입부</h2>
       <p>{escape(intro)}</p>
-      <p>연예 뉴스는 제목만 보면 내용이 꽤 커 보일 때가 많습니다. 그래서 이번 글에서는 자극적인 표현을 따라가기보다, 지금 확인 가능한 기사 흐름만 블로그식으로 짧게 풀어보겠습니다.</p>
-{image_recommendations["intro"]}
+      <p>제목만 보면 살짝 센 이야기처럼 느껴질 수 있는데요. 막상 뜯어보면 그렇게 복잡한 내용은 아닙니다. 편하게 읽을 수 있게 핵심만 정리해볼게요.</p>
+{image_blocks["intro"]}
     </section>
 
     <section id="issue-2">
       <h2>이슈 핵심 정리</h2>
       <p>{escape(core)}</p>
-      <p>기사 문장을 그대로 옮기기보다 흐름만 잡아보면, 이번 이야기는 '{escape(lead_entity(item))}' 키워드를 중심으로 읽는 편이 가장 자연스럽습니다.</p>
-{fact_box}
-      <p class="meta">보도 시각: {pub_date} | 출처: <a href="{url}" target="_blank" rel="noopener noreferrer">{escape(source_name)}</a></p>
-{image_recommendations["core"]}
+      <p>길게 설명할 필요 없이, 이번 글은 '{escape(lead_entity(item))}'라는 키워드로 보면 가장 쉽게 잡힙니다. 누가 무슨 말을 했고, 왜 그 말이 기사로 이어졌는지만 보면 됩니다.</p>
+{image_blocks["core"]}
     </section>
 
     <section id="issue-3">
@@ -598,21 +571,21 @@ def render_html(item: dict, tags: list[str], related_articles: list[dict] | None
     <section id="issue-4">
       <h2>대중 반응 정리</h2>
       <p>{escape(public_reaction)}</p>
-      <p>아래 링크는 같은 키워드로 함께 확인한 보조 기사입니다. 원문을 길게 베껴 쓰지 않고, 어떤 매체들이 비슷한 흐름을 다뤘는지 확인하는 용도로만 남깁니다.</p>
+      <p>비슷한 내용으로 함께 확인한 기사도 아래에 남겨둡니다. 제목만 훑어봐도 어떤 포인트가 반복됐는지 감이 옵니다.</p>
 {related_block}
-{image_recommendations["reaction"]}
+{image_blocks["reaction"]}
     </section>
 
     <section id="issue-5">
       <h2>개인적인 해석</h2>
       <p>{escape(interpretation)}</p>
-      <p>다만 확인되지 않은 추측까지 얹으면 글이 쉽게 과해질 수 있습니다. 그래서 여기서는 기사에서 확인되는 내용과 반복해서 등장하는 키워드만 남겼습니다.</p>
+      <p>이런 이야기는 너무 진지하게 몰고 가면 오히려 어색해집니다. 지금 나온 내용만 보면, 그냥 가볍게 보고 지나갈 수 있는 연예 이슈에 더 가깝습니다.</p>
     </section>
 
     <section id="issue-6">
       <h2>마무리</h2>
       <p>{escape(closing)}</p>
-      <p>연예 소식은 빠르게 읽히는 만큼, 조금만 시간이 지나도 맥락이 바뀔 수 있습니다. 이 글은 현재 확인한 보도 기준의 정리이며, 새 내용이 나오면 원문과 공식 채널을 함께 보는 편이 좋겠습니다.</p>
+      <p>혹시 뒤이어 새로운 말이 나오면 그때 다시 보면 됩니다. 지금은 제목만 보고 너무 크게 받아들이기보다, 이런 이야기가 나왔구나 정도로 정리하면 충분해 보입니다.</p>
       <div class="source-bookmark">
         <a href="{url}" target="_blank" rel="noopener noreferrer">원문 기사: {escape(original_title)}</a>
         <span>{escape(domain)}</span>
