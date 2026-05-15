@@ -9,6 +9,7 @@ import ssl
 import sys
 import urllib.parse
 import urllib.request
+from html.parser import HTMLParser
 from pathlib import Path
 
 
@@ -66,6 +67,44 @@ NOISY_TERM_SUFFIXES = (
     "했나",
     "인가",
 )
+
+
+class ArticleTextParser(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__()
+        self.parts: list[str] = []
+        self._skip_depth = 0
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag in {"script", "style", "iframe"}:
+            self._skip_depth += 1
+            return
+        if self._skip_depth:
+            return
+        if tag in {"br", "p", "div", "li"}:
+            self.parts.append("\n")
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag in {"script", "style", "iframe"} and self._skip_depth:
+            self._skip_depth -= 1
+            return
+        if self._skip_depth:
+            return
+        if tag in {"p", "div", "li"}:
+            self.parts.append("\n")
+
+    def handle_data(self, data: str) -> None:
+        if self._skip_depth:
+            return
+        text = clean_text(data)
+        if text:
+            self.parts.append(text)
+
+    def text(self) -> str:
+        text = " ".join(part if part != "\n" else "\n" for part in self.parts)
+        text = re.sub(r"[ \t]*\n[ \t]*", "\n", text)
+        text = re.sub(r"[ \t]{2,}", " ", text)
+        return text.strip()
 
 
 def ssl_context() -> ssl.SSLContext:
@@ -184,6 +223,82 @@ def fetch_text(url: str) -> str:
         return response.read().decode(charset, errors="replace")
 
 
+def extract_div_html(page: str, marker: str) -> str:
+    marker_pos = page.find(marker)
+    if marker_pos == -1:
+        return ""
+    start = page.rfind("<div", 0, marker_pos)
+    if start == -1:
+        return ""
+
+    depth = 0
+    for match in re.finditer(r"</?div\b[^>]*>", page[start:], flags=re.IGNORECASE):
+        token = match.group(0)
+        if token.startswith("</"):
+            depth -= 1
+            if depth == 0:
+                return page[start : start + match.end()]
+        else:
+            depth += 1
+    return ""
+
+
+def split_article_sentences(text: str) -> list[str]:
+    text = re.sub(r"\[[^\]]{1,20}\]", " ", text)
+    text = re.sub(r"\b[\w.+-]+@[\w.-]+\.\w+\b", " ", text)
+    lines = []
+    for line in text.splitlines():
+        line = clean_text(line)
+        if not line:
+            continue
+        if line.startswith(("▲", "▶")):
+            continue
+        if "Copyright" in line or "무단 전재" in line or "All rights reserved" in line:
+            continue
+        if "기자" in line and len(line) < 35:
+            continue
+        lines.append(line)
+
+    joined = " ".join(lines)
+    raw_sentences = re.split(r"(?<=[.!?。])\s+", joined)
+    sentences: list[str] = []
+    for sentence in raw_sentences:
+        sentence = clean_text(sentence)
+        if len(sentence) < 18:
+            continue
+        if sentence.startswith(("▲", "▶")):
+            continue
+        if "Copyright" in sentence or "무단 전재" in sentence:
+            continue
+        if sentence not in sentences:
+            sentences.append(sentence)
+        if len(sentences) == 14:
+            break
+    return sentences
+
+
+def extract_article_context(article: dict) -> dict:
+    try:
+        page = fetch_text(article["url"])
+    except Exception:
+        return {"article_text": "", "article_sentences": []}
+
+    html_body = extract_div_html(page, 'id="realArtcContents"')
+    if not html_body:
+        html_body = extract_div_html(page, 'id="articleBody"')
+    if not html_body:
+        return {"article_text": "", "article_sentences": []}
+
+    parser = ArticleTextParser()
+    parser.feed(html_body)
+    article_text = parser.text()
+    sentences = split_article_sentences(article_text)
+    return {
+        "article_text": " ".join(sentences[:12]),
+        "article_sentences": sentences[:12],
+    }
+
+
 def normalize_image_url(url: str) -> str:
     url = html.unescape(url)
     url = url.split("\\u003d")
@@ -247,14 +362,16 @@ def extract_images(article: dict) -> list[dict]:
 
 def enrich_item(item: dict, related_limit: int, image_limit: int) -> dict:
     query = build_query(item)
+    article_context = extract_article_context(item)
+    enriched_item = {**item, **article_context}
     related_candidates = fetch_rss(query)
     related_articles = unique_related(item, related_candidates, related_limit)
     article_pool = [
         {
-            "title": item.get("title", ""),
-            "url": item.get("url", ""),
-            "source_name": item.get("source_name") or item.get("domain") or "source",
-            "domain": item.get("domain", ""),
+            "title": enriched_item.get("title", ""),
+            "url": enriched_item.get("url", ""),
+            "source_name": enriched_item.get("source_name") or enriched_item.get("domain") or "source",
+            "domain": enriched_item.get("domain", ""),
         },
         *related_articles,
     ]
@@ -282,7 +399,7 @@ def enrich_item(item: dict, related_limit: int, image_limit: int) -> dict:
 
     return {
         "query": query,
-        "item": item,
+        "item": enriched_item,
         "related_articles": related_articles,
         "image_candidates": image_candidates,
     }

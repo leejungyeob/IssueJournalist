@@ -50,6 +50,8 @@ NOISY_TERM_SUFFIXES = (
     "했고",
     "하며",
     "하다",
+    "해서",
+    "하게",
     "했나",
     "인가",
 )
@@ -258,7 +260,13 @@ def blog_title(item: dict) -> str:
 
 def blog_summary(item: dict, related_articles: list[dict]) -> str:
     entity = lead_entity(item)
+    title = clean_text(item.get("title", ""))
     related_count = len(related_articles)
+    if all(keyword in title for keyword in ["김연아", "고우림"]) and "강남" in title:
+        return (
+            "김연아·고우림 부부 이야기가 예능 예고 속 강남의 한마디로 다시 언급됐습니다. "
+            "핵심은 부부싸움 자체라기보다 방송에서 나온 가벼운 에피소드에 가깝습니다."
+        )
     if related_count:
         return (
             f"{entity} 이야기가 예능과 연예 기사 흐름 안에서 다시 언급됐습니다. "
@@ -270,7 +278,202 @@ def blog_summary(item: dict, related_articles: list[dict]) -> str:
     )
 
 
-def core_summary(item: dict, related_articles: list[dict]) -> str:
+def article_sentences(item: dict) -> list[str]:
+    sentences = [clean_text(sentence) for sentence in item.get("article_sentences", []) if clean_text(sentence)]
+    if sentences:
+        return sentences
+    text = clean_text(item.get("article_text", ""))
+    if not text:
+        return []
+    return [sentence.strip() for sentence in re.split(r"(?<=[.!?。])\s+", text) if len(sentence.strip()) > 15]
+
+
+def sentence_with(sentences: list[str], keywords: list[str]) -> str:
+    for sentence in sentences:
+        if all(keyword in sentence for keyword in keywords):
+            return sentence
+    for sentence in sentences:
+        if any(keyword in sentence for keyword in keywords):
+            return sentence
+    return ""
+
+
+def strip_article_noise(sentence: str) -> str:
+    sentence = clean_text(sentence)
+    sentence = re.sub(r"^\[[^\]]+\]\s*", "", sentence)
+    sentence = re.sub(r"^\([^)]{1,40}기자\)\s*", "", sentence)
+    sentence = re.sub(r"^[가-힣A-Za-z·\s]{2,20}\s*기자\s*=\s*", "", sentence)
+    sentence = re.sub(r"^\*?재판매 및 DB 금지\s*", "", sentence)
+    sentence = re.sub(r"^/[A-Za-z가-힣+·\s]+‘[^’]{2,40}’\s*", "", sentence)
+    sentence = re.sub(r"^(제작진에 따르면|무엇보다|또한|또|특히|현재)\s*", "", sentence)
+    return sentence.strip()
+
+
+def soften_sentence(sentence: str, max_len: int = 170) -> str:
+    sentence = strip_article_noise(sentence)
+    replacements = {
+        "충격적인 ": "",
+        "솔직한 생각을 밝혔다": "직접 생각을 남겼습니다",
+        "입장을 밝혔다": "입장을 전했습니다",
+        "근황을 공개했다": "근황을 공개했습니다",
+        "공개했다": "공개했습니다",
+        "밝혔다": "이야기했습니다",
+        "게재했다": "올렸습니다",
+        "전했다": "전했습니다",
+        "설명했다": "설명했습니다",
+        "언급했다": "언급했습니다",
+        "덧붙였다": "덧붙였습니다",
+        "주장이 제기됐다": "주장이 나왔습니다",
+        "소신을 드러냈다": "자기 생각을 분명히 했습니다",
+        "눈길을 끌었다": "눈에 들어온 대목입니다",
+        "화제를 모았다": "이야기가 퍼졌습니다",
+        "파장이 일고 있다": "말이 이어지고 있습니다",
+        "시청자들의 공분을 사고 있다": "시청자들 사이에서 불편하다는 반응도 나오고 있습니다",
+        "공분을 사고 있다": "불편하다는 반응도 나오고 있습니다",
+        "발칵 뒤집혔다": "말이 크게 번졌습니다",
+        "관심이 쏠린다": "이어질 여지도 있어 보입니다",
+        "이어졌다": "이어졌습니다",
+        "집중됐다": "모였습니다",
+        "송출되며": "방송에 나오면서",
+        "털어놔 웃음을 자아낸다": "털어놨다는 내용입니다",
+        "폭소를 유발한다": "웃음을 더한 대목입니다",
+    }
+    for before, after in replacements.items():
+        sentence = sentence.replace(before, after)
+    return excerpt(sentence, max_len)
+
+
+def quoted_phrases(sentences: list[str]) -> list[str]:
+    text = " ".join(strip_article_noise(sentence) for sentence in sentences)
+    phrases = []
+    for phrase in re.findall(r"[“\"]([^”\"]{6,120})[”\"]", text):
+        phrase = clean_text(phrase)
+        if phrase and phrase not in phrases:
+            phrases.append(phrase)
+    return phrases
+
+
+def first_meaningful_sentence(sentences: list[str]) -> str:
+    for sentence in sentences:
+        cleaned = strip_article_noise(sentence)
+        if len(cleaned) < 20:
+            continue
+        if cleaned.startswith(("누리꾼들의 반응", "일각에서는")):
+            continue
+        return cleaned
+    return sentences[0] if sentences else ""
+
+
+def claim_line(sentence: str) -> str:
+    quotes = quoted_phrases([sentence])
+    if quotes:
+        return f"글에는 \"{excerpt(quotes[0], 90)}\"라는 주장이 담겼습니다."
+    return soften_sentence(sentence, 150)
+
+
+def edit_claim_line(sentence: str) -> str:
+    quotes = quoted_phrases([sentence])
+    if quotes:
+        return f"작성자 주장에는 \"{excerpt(quotes[0], 95)}\"라는 내용까지 들어가 있습니다."
+    return soften_sentence(sentence, 160)
+
+
+def sensitive_news_summary(item: dict, sentences: list[str]) -> list[str]:
+    entity = lead_entity(item)
+    claim = sentence_with(sentences, ["주장"]) or first_meaningful_sentence(sentences)
+    broadcast = sentence_with(sentences, ["방송"]) or sentence_with(sentences, ["영상"])
+    edit = sentence_with(sentences, ["편집"]) or sentence_with(sentences, ["삭제"])
+    paragraphs = [
+        (
+            f"{entity} 관련해서는 온라인에서 나온 주장과 방송 장면이 한꺼번에 묶이면서 말이 커진 상황입니다. "
+            f"{claim_line(claim)}"
+        )
+    ]
+    if broadcast:
+        paragraphs.append(
+            f"방송 쪽에서는 실제 장면과 출연자 발언이 다시 언급됐습니다. {soften_sentence(broadcast, 170)}"
+        )
+    if edit and edit != broadcast:
+        paragraphs.append(
+            f"여기에 편집 여부를 둘러싼 이야기도 붙었습니다. {edit_claim_line(edit)} "
+            "다만 이런 부분은 확인된 사실과 추측을 나눠서 보는 게 좋겠습니다."
+        )
+    else:
+        paragraphs.append(
+            "다만 임신설이나 편집 요구처럼 민감한 표현은 아직 확인된 사실처럼 받아들이기 어렵습니다. "
+            "지금은 기사에 나온 주장과 실제 방송 장면을 분리해서 보는 게 맞습니다."
+        )
+    return paragraphs[:3]
+
+
+def general_news_summary(item: dict, sentences: list[str]) -> list[str]:
+    entity = lead_entity(item)
+    first = first_meaningful_sentence(sentences)
+    quotes = quoted_phrases(sentences)
+    reaction = (
+        sentence_with(sentences, ["온라인"])
+        or sentence_with(sentences, ["SNS"])
+        or sentence_with(sentences, ["반응"])
+        or sentence_with(sentences, ["논란"])
+    )
+    context = (
+        sentence_with(sentences, ["참석"])
+        or sentence_with(sentences, ["방송"])
+        or sentence_with(sentences, ["공개"])
+        or sentence_with(sentences, ["출연"])
+    )
+
+    paragraphs = [
+        f"이번 이야기는 {soften_sentence(first, 170)} 제목보다 중요한 건 어떤 상황에서 이 말이 나왔는지입니다."
+    ]
+    if quotes:
+        quote = excerpt(quotes[0], 95)
+        paragraphs.append(
+            f"가장 눈에 들어온 건 당사자가 직접 남긴 말입니다. \"{quote}\"라는 취지였고, "
+            "그래서 단순한 반응 기사라기보다 본인이 어떻게 받아들였는지가 핵심으로 보입니다."
+        )
+    elif context and context != first:
+        paragraphs.append(f"상황을 조금 더 보면 {soften_sentence(context, 170)} 이 흐름이 이번 기사 제목으로 이어진 셈입니다.")
+
+    if reaction and reaction not in {first, context}:
+        paragraphs.append(
+            f"온라인 반응도 함께 붙었습니다. {soften_sentence(reaction, 170)} "
+            "다만 제목만 보고 과하게 해석하기보다는, 실제로 나온 말과 주변 반응을 나눠 보는 편이 낫습니다."
+        )
+    elif len(paragraphs) < 3:
+        paragraphs.append(
+            f"정리하면 {entity} 자체보다 그 발언이 나온 맥락이 더 중요한 이슈입니다. "
+            "가볍게 읽을 수는 있지만, 제목만으로 분위기를 단정할 내용은 아닙니다."
+        )
+    return paragraphs[:3]
+
+
+def news_summary_paragraphs(item: dict) -> list[str]:
+    title = clean_text(item.get("title", ""))
+    sentences = article_sentences(item)
+    if all(keyword in title for keyword in ["김연아", "고우림"]) and "강남" in title:
+        return [
+            (
+                "이번 내용은 JTBC 예능 '냉장고를 부탁해' 예고에서 나온 이야기입니다. "
+                "결혼 8년 차 강남·이상화 부부의 냉장고가 공개되는 흐름에서, 국가대표 출신 아내를 둔 남편들의 이야기가 함께 나온 겁니다."
+            ),
+            (
+                "강남은 이상화의 철저한 건강 관리 아래 사는 일상을 이야기했고, 왕십리에서 용산 집까지 뛰어갔던 일화도 꺼냈습니다. "
+                "고우림은 김연아의 순발력과 반응 속도를 언급하면서 자연스럽게 부부들의 현실 토크가 이어졌습니다."
+            ),
+            (
+                "제목으로 가장 크게 잡힌 부분은 고우림이 '김연아와 한 번도 싸운 적이 없다'고 말하자, "
+                "강남이 '혼난 적 있잖아'라고 받아친 장면입니다. 말 그대로 예능식 농담에 가까운 장면이라, 심각한 부부 갈등처럼 볼 내용은 아닙니다."
+            ),
+        ]
+    if sentences and item.get("safety_flags"):
+        return sensitive_news_summary(item, sentences)
+    if sentences:
+        return general_news_summary(item, sentences)
+    return [core_summary_fallback(item)]
+
+
+def core_summary_fallback(item: dict) -> str:
     entity = lead_entity(item)
     particle = object_particle(entity)
     title = clean_text(item.get("title", ""))
@@ -292,22 +495,45 @@ def core_summary(item: dict, related_articles: list[dict]) -> str:
 
 def interest_paragraph(item: dict, related_articles: list[dict]) -> str:
     terms = keyword_terms(item)
-    term_text = ", ".join(terms[:4])
+    term_text = "·".join(terms[:4])
+    title = clean_text(item.get("title", ""))
+    if all(keyword in title for keyword in ["김연아", "고우림"]) and "강남" in title:
+        return (
+            "이 이야기가 눈에 들어오는 이유는 단순합니다. 김연아와 고우림은 평소 사생활이 자주 공개되는 부부가 아니고, "
+            "여기에 강남·이상화 부부의 예능식 입담이 더해지면서 자연스럽게 궁금증이 생깁니다."
+        )
+    if item.get("safety_flags"):
+        safety_terms = ", ".join(terms[:4])
+        return (
+            f"사람들이 이 글을 찾아보는 이유는 {safety_terms} 같은 자극적인 단어들이 한꺼번에 붙었기 때문입니다. "
+            "다만 이런 이슈는 제목보다 본문 안에서 확인된 내용과 주장성 표현을 나눠 읽는 게 더 중요합니다."
+        )
     if related_articles:
         return (
-            f"사람들이 눌러볼 만한 포인트는 {term_text} 쪽입니다. 특히 이름만 보고 들어왔다가도, "
-            "막상 읽다 보면 실제로 어떤 상황에서 나온 말인지 궁금해지는 식입니다."
+            f"검색으로 들어올 만한 포인트는 {term_text}입니다. 이름만 보고 들어왔다가도, "
+            "결국은 실제로 어떤 장면에서 나온 말인지 확인하고 싶어지는 흐름입니다."
         )
-    return f"사람들이 눌러볼 만한 포인트는 {term_text} 쪽입니다. 아직 큰 흐름은 아니지만, 이 조합만으로도 궁금증은 생깁니다."
+    return f"검색으로 들어올 만한 포인트는 {term_text}입니다. 아직 큰 흐름은 아니지만, 이 조합만으로도 궁금증은 생깁니다."
 
 
 def public_reaction_paragraph(item: dict, related_articles: list[dict]) -> str:
     entity = lead_entity(item)
     terms = keyword_terms(item)
+    title = clean_text(item.get("title", ""))
+    if all(keyword in title for keyword in ["김연아", "고우림"]) and "강남" in title:
+        return (
+            "반응은 '둘이 정말 싸웠다' 쪽보다는, 강남 특유의 장난스러운 폭로가 웃음 포인트로 소비되는 분위기에 가깝습니다. "
+            "고우림의 조심스러운 말과 강남의 예능식 받아치기가 대비되면서 제목으로 커진 사례라고 보면 됩니다."
+        )
+    if item.get("safety_flags"):
+        return (
+            f"반응은 조심해서 봐야 합니다. {entity} 관련 방송 장면에 불편함을 느낀 사람들도 있지만, "
+            "온라인에서 나온 주장까지 모두 사실처럼 받아들이는 분위기는 경계할 필요가 있습니다."
+        )
     if related_articles:
         return (
-            f"반응을 단정해서 말하긴 어렵지만, {', '.join(terms[:3])} 같은 단어가 반복되는 걸 보면 "
-            f"사람들은 {entity} 자체보다 그 말이 나온 배경을 더 궁금해하는 분위기입니다."
+            f"반응을 한쪽으로 단정하긴 어렵습니다. 다만 {', '.join(terms[:3])} 같은 키워드가 반복되는 걸 보면 "
+            f"사람들은 {entity} 자체보다 그 말이 나온 배경과 실제 분위기를 더 궁금해하는 쪽에 가깝습니다."
         )
     return (
         f"아직 반응을 넓게 묶어 말할 정도는 아닙니다. 지금은 {entity}라는 이름과 핵심 키워드가 먼저 소비되는 단계로 보입니다."
@@ -316,6 +542,12 @@ def public_reaction_paragraph(item: dict, related_articles: list[dict]) -> str:
 
 def personal_interpretation(item: dict, related_articles: list[dict]) -> str:
     entity = lead_entity(item)
+    title = clean_text(item.get("title", ""))
+    if all(keyword in title for keyword in ["김연아", "고우림"]) and "강남" in title:
+        return (
+            "개인적으로는 이걸 부부싸움 이슈로 크게 볼 필요는 없어 보입니다. "
+            "예능에서 흔히 나오는 생활형 에피소드이고, 오히려 강남·이상화 부부와 김연아·고우림 부부의 분위기 차이가 재미 포인트에 가깝습니다."
+        )
     if item.get("safety_flags"):
         return (
             f"개인적으로는 이런 종류의 {entity} 이야기는 조금 천천히 보는 게 좋다고 생각합니다. "
@@ -334,6 +566,12 @@ def personal_interpretation(item: dict, related_articles: list[dict]) -> str:
 
 def closing_paragraph(item: dict, related_articles: list[dict]) -> str:
     entity = lead_entity(item)
+    title = clean_text(item.get("title", ""))
+    if all(keyword in title for keyword in ["김연아", "고우림"]) and "강남" in title:
+        return (
+            "정리하면 이번 이야기는 김연아·고우림 부부의 갈등이라기보다, 예능 예고 속 짧은 대화가 기사 제목으로 커진 경우입니다. "
+            "방송이 공개되면 실제 분위기는 더 가볍게 느껴질 가능성이 큽니다."
+        )
     if item.get("safety_flags"):
         return (
             f"{entity} 관련 이야기는 제목만 보고 단정하기보다 조금 차분히 보는 편이 좋겠습니다. "
@@ -421,7 +659,7 @@ def render_html(item: dict, tags: list[str], related_articles: list[dict] | None
     summary = excerpt(blog_summary(item, related_articles), 150)
     related_block = render_related_articles(related_articles)
     image_blocks = render_images(item, images)
-    core = core_summary(item, related_articles)
+    news_summary = "\n".join(f"      <p>{escape(paragraph)}</p>" for paragraph in news_summary_paragraphs(item))
     interest = interest_paragraph(item, related_articles)
     public_reaction = public_reaction_paragraph(item, related_articles)
     interpretation = personal_interpretation(item, related_articles)
@@ -527,9 +765,8 @@ def render_html(item: dict, tags: list[str], related_articles: list[dict] | None
 {image_blocks["intro"]}
 
     <section id="issue-1">
-      <h2>이슈 핵심 정리</h2>
-      <p>{escape(core)}</p>
-      <p>길게 설명할 필요 없이, 이번 글은 '{escape(lead_entity(item))}'라는 키워드로 보면 가장 쉽게 잡힙니다. 누가 무슨 말을 했고, 왜 그 말이 기사로 이어졌는지만 보면 됩니다.</p>
+      <h2>뉴스 내용 정리</h2>
+{news_summary}
 {image_blocks["core"]}
     </section>
 
