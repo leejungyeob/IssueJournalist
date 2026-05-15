@@ -755,28 +755,28 @@ def sensitive_blog_sections(item: dict) -> list[tuple[str, list[str]]]:
             "온라인에서 나온 주장",
             [
                 section_fact(claim, f"{entity} 관련 이야기는 온라인에서 나온 주장성 내용과 함께 커졌습니다."),
-                "이런 내용은 제목으로 보면 굉장히 크게 느껴집니다. 다만 커뮤니티발 주장과 실제 확인된 방송 내용을 같은 무게로 놓기엔 조금 조심스러운 부분이 있었습니다.",
+                "이런 내용은 제목으로 보면 굉장히 크게 느껴집니다. 다만 커뮤니티발 주장과 실제 확인된 방송 내용을 같은 무게로 놓기엔 조금 조심스러운 부분이 있었습니다. 그래서 먼저 어디서 나온 이야기인지, 기사 안에서는 어떻게 다뤄졌는지를 나눠서 보는 게 더 자연스럽게 느껴졌습니다.",
             ],
         ),
         (
             "방송 장면과 맞물린 말",
             [
                 section_fact(broadcast, "방송에서 나온 장면도 함께 언급되며 논란이 이어졌습니다."),
-                "시청자 반응이 붙은 이유는 단순히 소문 때문만은 아닙니다. 이미 방송에서 불편하게 본 장면이 있었고, 그 위에 추가 주장이 얹히면서 말이 더 커진 흐름입니다.",
+                "시청자 반응이 붙은 이유는 단순히 소문 때문만은 아닙니다. 이미 방송에서 불편하게 본 장면이 있었고, 그 위에 추가 주장이 얹히면서 말이 더 커진 흐름입니다. 결국 이 이슈는 방송 장면 하나만의 문제라기보다, 이후 온라인에서 붙은 이야기까지 함께 커진 쪽에 가까워 보였습니다.",
             ],
         ),
         (
             "통편집설로 번진 이유",
             [
                 section_fact(edit, "편집 여부를 두고도 말이 이어졌습니다."),
-                "다만 통편집이나 편집 요구 같은 표현은 확인되지 않은 부분까지 섞이기 쉽습니다. 그래서 실제 방송 분량과 기사에서 확인된 설명을 따로 나눠서 정리하는 쪽이 더 자연스러웠습니다.",
+                "다만 통편집이나 편집 요구 같은 표현은 확인되지 않은 부분까지 섞이기 쉽습니다. 그래서 실제 방송 분량과 기사에서 확인된 설명을 따로 나눠서 정리하는 쪽이 더 자연스러웠습니다. 제목의 강한 단어만 따라가면 흐름이 과하게 보일 수 있어, 본문에서는 기사에 담긴 내용만 중심으로 담았습니다.",
             ],
         ),
         (
             "조금 더 지켜볼 부분",
             [
                 "민감한 이슈일수록 제목에 들어간 단어가 본문보다 더 크게 남습니다. 임신설, 협박설, 편집설 같은 표현은 특히 출처와 확인 여부가 먼저 눈에 들어왔습니다.",
-                "정리하면 지금은 확정된 사건이라기보다 방송 장면, 온라인 주장, 시청자 반응이 한꺼번에 섞인 상태로 보입니다. 지금은 단정하지 않는 게 좋아 보입니다! 새로운 내용이 나오면 다시 관련한 내용을 안내하겠습니다.",
+                "정리하면 지금은 확정된 사건이라기보다 방송 장면, 온라인 주장, 시청자 반응이 한꺼번에 섞인 상태로 보입니다. 지금은 단정하지 않는 게 좋아 보입니다! 다만 방송 안에서 어떤 흐름으로 이어질지는 조금 더 봐야 할 것 같고, 새로운 내용이 나오면 다시 관련한 내용을 안내하겠습니다.",
             ],
         ),
     ]
@@ -1235,7 +1235,6 @@ def render_html(item: dict, tags: list[str], related_articles: list[dict] | None
     summary = excerpt(lead_text, 150)
     image_blocks = render_images(item, images)
     issue_sections = render_issue_sections(reference_blog_sections(item, related_articles), image_blocks)
-    closing = closing_paragraph(item, related_articles)
 
     return f"""<!doctype html>
 <html lang="ko">
@@ -1330,14 +1329,10 @@ def render_html(item: dict, tags: list[str], related_articles: list[dict] | None
 
 {issue_sections}
 
-    <section id="issue-5">
-      <h2>마무리</h2>
-      <p>{escape(closing)}</p>
-      <div class="source-bookmark">
-        <a href="{url}" target="_blank" rel="noopener noreferrer">원문 기사: {escape(original_title)}</a>
-        <span>{escape(domain)}</span>
-      </div>
-    </section>
+    <div class="source-bookmark">
+      <a href="{url}" target="_blank" rel="noopener noreferrer">원문 기사: {escape(original_title)}</a>
+      <span>{escape(domain)}</span>
+    </div>
 
     <p class="tags">{escape(tag_text)}</p>
   </article>
